@@ -21,7 +21,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadData() {
-      if (!authUser) return
+      if (!authUser) {
+        setLoading(false)
+        return
+      }
 
       const userData = await findById("users", authUser.id) as User | null
       setUser(userData)
