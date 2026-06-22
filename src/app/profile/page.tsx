@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-client"
 import { query, findById, insert, updateById } from "@/lib/db-client"
@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, Camera, Save, User, Shield, Star, Trophy, Medal, Upload } from "lucide-react"
+import { Loader2, Camera, Save, User, Shield, Star, Trophy, Medal, Upload, CheckCircle2, AlertCircle } from "lucide-react"
 import { getInitials } from "@/lib/utils"
 import { POSITIONS, CATEGORIES, LEVELS, AVAILABILITIES, LEGS } from "@/lib/constants"
 import type { User as UserType, PlayerProfile, Badge as BadgeType } from "@/lib/types"
@@ -26,6 +26,7 @@ export default function ProfilePage() {
   const [badges, setBadges] = useState<BadgeType[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [activeTab, setActiveTab] = useState("view")
   const router = useRouter()
@@ -51,20 +52,18 @@ export default function ProfilePage() {
     video_urls: [] as string[],
   })
 
-  useEffect(() => {
-    async function loadProfile() {
-      if (!authUser) { router.push("/auth/login"); return }
-
-      const userData = await findById("users", authUser.id) as UserType | null
+  const loadProfile = useCallback(async () => {
+    if (!authUser) { router.push("/auth/login"); return }
+    try {
+      const [userData, profileResult, userBadges] = await Promise.all([
+        findById<UserType>("users", authUser.id),
+        query<PlayerProfile>("SELECT * FROM player_profiles WHERE user_id = $1 LIMIT 1", [authUser.id]),
+        query<BadgeType>("SELECT * FROM badges WHERE user_id = $1", [authUser.id]),
+      ])
       setUser(userData)
-
-      const profileResult = await query("SELECT * FROM player_profiles WHERE user_id = $1 LIMIT 1", [authUser.id]) as PlayerProfile[]
-      const profileData = profileResult?.[0] || null
-
-      const userBadges = await query("SELECT * FROM badges WHERE user_id = $1", [authUser.id]) as BadgeType[]
-
       setBadges(userBadges || [])
 
+      const profileData = profileResult?.[0] || null
       if (profileData) {
         setProfile(profileData)
         setForm({
@@ -87,14 +86,18 @@ export default function ProfilePage() {
           video_urls: profileData.video_urls || [],
         })
       }
-      setLoading(false)
+    } catch (error) {
+      console.error("Error loading profile:", error)
     }
-    loadProfile()
+    setLoading(false)
   }, [authUser, router])
 
+  useEffect(() => { loadProfile() }, [loadProfile])
+
   const handleSave = async () => {
-    setSaving(true)
     if (!authUser) return
+    setSaving(true)
+    setSaveMessage(null)
 
     const profileData = {
       user_id: authUser.id,
@@ -117,14 +120,25 @@ export default function ProfilePage() {
       video_urls: form.video_urls,
     }
 
-    if (profile) {
-      await updateById("player_profiles", profile.id, profileData)
-    } else {
-      await insert("player_profiles", profileData)
-    }
+    try {
+      if (profile) {
+        await updateById("player_profiles", profile.id, profileData)
+      } else {
+        await insert("player_profiles", profileData)
+      }
 
+      setSaveMessage({ type: "success", text: "Perfil guardado correctamente" })
+      const savedProfile = profile
+        ? { ...profile, ...profileData }
+        : { id: "tmp", ...profileData }
+
+      setProfile(savedProfile as PlayerProfile)
+      setTimeout(() => setActiveTab("view"), 600)
+    } catch (error) {
+      console.error("Error saving profile:", error)
+      setSaveMessage({ type: "error", text: "Error al guardar. Intentá de nuevo." })
+    }
     setSaving(false)
-    setActiveTab("view")
   }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -286,10 +300,18 @@ export default function ProfilePage() {
                 <Input value={form.social_whatsapp} onChange={(e) => setForm({ ...form, social_whatsapp: e.target.value })} placeholder="WhatsApp (opcional)" />
               </div>
             </div>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-              Guardar cambios
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                {saving ? "Guardando..." : "Guardar cambios"}
+              </Button>
+              {saveMessage && (
+                <span className={`text-sm flex items-center gap-1 ${saveMessage.type === "success" ? "text-green-500" : "text-destructive"}`}>
+                  {saveMessage.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                  {saveMessage.text}
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : (
