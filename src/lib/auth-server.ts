@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from "jose"
 import { cookies } from "next/headers"
 import { compare, hash } from "bcryptjs"
 import { query } from "./db"
+import type { NextResponse } from "next/server"
 
 const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET || "fallback-secret-change-in-production"
@@ -21,6 +22,33 @@ export async function createSession(userId: string, role: string) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60,
+    path: "/",
+  })
+}
+
+export async function createSessionToken(userId: string, role: string) {
+  return await new SignJWT({ userId, role })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("7d")
+    .sign(secret)
+}
+
+export function setSessionCookie(response: NextResponse, token: string) {
+  response.cookies.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60,
+    path: "/",
+  })
+}
+
+export function clearSessionCookie(response: NextResponse) {
+  response.cookies.set(COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0,
     path: "/",
   })
 }

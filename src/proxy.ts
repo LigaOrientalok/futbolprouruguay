@@ -10,7 +10,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const sessionCookie = request.cookies.get(COOKIE_NAME)?.value
 
-  const publicPaths = ["/", "/auth/login", "/auth/register", "/auth/error"]
+  const publicPaths = ["/", "/auth/login", "/auth/register", "/auth/error", "/api/auth/login", "/api/auth/register", "/api/auth/me"]
   const isPublic = publicPaths.some((p) => pathname.startsWith(p))
   const isStaticAsset = pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname.includes(".")
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { query } from "@/lib/db"
-import { createSession, hashPassword } from "@/lib/auth-server"
+import { createSessionToken, setSessionCookie, hashPassword } from "@/lib/auth-server"
 
 export async function POST(req: Request) {
   try {
@@ -36,9 +36,8 @@ export async function POST(req: Request) {
     )
 
     const user = result[0]
-    await createSession(user.id, user.role)
-
-    return NextResponse.json({
+    const token = await createSessionToken(user.id, user.role)
+    const response = NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
@@ -48,6 +47,8 @@ export async function POST(req: Request) {
         subscription_tier: user.subscription_tier,
       },
     })
+    setSessionCookie(response, token)
+    return response
   } catch (error) {
     console.error("Register error:", error)
     return NextResponse.json({ error: "Error del servidor" }, { status: 500 })
