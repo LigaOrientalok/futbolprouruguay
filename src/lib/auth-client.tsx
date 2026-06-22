@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 
 export interface AuthUser {
   id: string
@@ -57,6 +57,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  const pathname = usePathname()
+  const publicPaths = ["/", "/auth/login", "/auth/register", "/auth/error"]
+  const isPublic = publicPaths.some((p) => pathname.startsWith(p))
+
+  useEffect(() => {
+    if (!loading && !user && !isPublic) {
+      router.push("/auth/login")
+    }
+  }, [loading, user, isPublic, router])
 
   const login = async (email: string, password: string) => {
     const res = await fetch("/api/auth/login", {
