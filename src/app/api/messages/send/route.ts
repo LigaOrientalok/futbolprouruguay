@@ -15,6 +15,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Datos inválidos" }, { status: 400 })
     }
 
+    const chats = await query<any>(
+      "SELECT participants FROM chats WHERE id = $1",
+      [chatId]
+    )
+    if (!chats?.[0]) {
+      return NextResponse.json({ error: "Chat no encontrado" }, { status: 404 })
+    }
+    if (!chats[0].participants?.includes(user.id)) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+    }
+
     const result = await query<any>(
       `INSERT INTO messages (chat_id, sender_id, content) VALUES ($1, $2, $3) RETURNING *`,
       [chatId, user.id, content.trim()]

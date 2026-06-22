@@ -20,7 +20,7 @@ export default function PremiumPage() {
   }, [user, loading, router])
 
   const handlePremium = async () => {
-    alert("Próximamente: integración con Stripe para procesar pagos.")
+    window.open("https://buy.stripe.com/test_placeholder", "_blank")
   }
 
   if (loading) {

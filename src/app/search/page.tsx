@@ -39,21 +39,33 @@ export default function SearchPage() {
 
     let sql = `SELECT u.*, row_to_json(pp.*) as profile FROM users u LEFT JOIN player_profiles pp ON pp.user_id = u.id WHERE u.role != 'admin'`
     const conditions: string[] = []
+    const params: (string | number)[] = []
+    let paramIndex = 1
 
     if (filters.position) {
-      conditions.push(`(pp.main_position = '${filters.position}' OR pp.secondary_positions @> ARRAY['${filters.position}'])`)
+      conditions.push(`(pp.main_position = $${paramIndex} OR pp.secondary_positions @> ARRAY[$${paramIndex}])`)
+      params.push(filters.position)
+      paramIndex++
     }
     if (filters.category) {
-      conditions.push(`pp.category = '${filters.category}'`)
+      conditions.push(`pp.category = $${paramIndex}`)
+      params.push(filters.category)
+      paramIndex++
     }
     if (filters.level) {
-      conditions.push(`pp.level = '${filters.level}'`)
+      conditions.push(`pp.level = $${paramIndex}`)
+      params.push(filters.level)
+      paramIndex++
     }
     if (filters.availability) {
-      conditions.push(`pp.availability = '${filters.availability}'`)
+      conditions.push(`pp.availability = $${paramIndex}`)
+      params.push(filters.availability)
+      paramIndex++
     }
     if (filters.city) {
-      conditions.push(`pp.city ILIKE '%${filters.city}%'`)
+      conditions.push(`pp.city ILIKE $${paramIndex}`)
+      params.push(`%${filters.city}%`)
+      paramIndex++
     }
 
     if (conditions.length > 0) {
@@ -62,7 +74,7 @@ export default function SearchPage() {
 
     sql += ` ORDER BY u.subscription_tier DESC LIMIT 50`
 
-    const data = await query(sql)
+    const data = await query(sql, params)
     let filtered = (Array.isArray(data) ? data : []).map((u: any) => ({
       ...u,
       profile: typeof u.profile === "string" ? JSON.parse(u.profile) : u.profile

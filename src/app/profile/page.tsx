@@ -137,8 +137,8 @@ export default function ProfilePage() {
         setUser(prev => prev ? { ...prev, avatar_url: res[0].url } : prev)
         await refreshAuth()
       }
-    } catch {
-      console.error("Error al subir avatar")
+    } catch (error) {
+      console.error("Error al subir avatar", error)
     }
     setAvatarUploading(false)
   }

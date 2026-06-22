@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-client"
-import { query, findById, findAll, insert, updateById, count } from "@/lib/db"
+import { query, findById, findAll, insert, updateById } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
@@ -21,6 +21,7 @@ export default function FeedPage() {
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
   const [posting, setPosting] = useState(false)
+  const [likedPostIds, setLikedPostIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (user) setCurrentUser(user as User)
@@ -55,6 +56,18 @@ export default function FeedPage() {
 
     setPosts(postsData)
     setLoading(false)
+
+    if (currentUser) {
+      const postIds = postsData.map((p: any) => p.id)
+      if (postIds.length > 0) {
+        const placeholders = postIds.map((_: any, i: number) => `$${i + 1}`).join(",")
+        const userLikes = await query(
+          `SELECT post_id FROM likes WHERE user_id = $${postIds.length + 1} AND post_id IN (${placeholders})`,
+          [...postIds, currentUser.id]
+        )
+        setLikedPostIds(new Set((userLikes || []).map((l: any) => l.post_id)))
+      }
+    }
   }
 
   async function createPost() {
@@ -87,12 +100,14 @@ export default function FeedPage() {
       if (post) {
         await updateById("posts", postId, { likes_count: ((post as any).likes_count || 0) - 1 })
       }
+      setLikedPostIds(prev => { const s = new Set(prev); s.delete(postId); return s })
     } else {
       await insert("likes", { post_id: postId, user_id: currentUser.id } as any)
       const post = await findById("posts", postId)
       if (post) {
         await updateById("posts", postId, { likes_count: ((post as any).likes_count || 0) + 1 })
       }
+      setLikedPostIds(prev => { const s = new Set(prev); s.add(postId); return s })
     }
     loadPosts()
   }
@@ -116,9 +131,7 @@ export default function FeedPage() {
     loadPosts()
   }
 
-  const hasLiked = (post: Post) => {
-    return false
-  }
+  const hasLiked = (post: Post) => likedPostIds.has(post.id)
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

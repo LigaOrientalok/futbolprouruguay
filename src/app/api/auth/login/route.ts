@@ -40,6 +40,7 @@ export async function POST(req: Request) {
         avatar_url: user.avatar_url,
         role: user.role,
         subscription_tier: user.subscription_tier,
+        is_suspended: user.is_suspended,
       },
     })
     setSessionCookie(response, token)
