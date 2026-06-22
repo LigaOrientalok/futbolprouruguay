@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-client"
-import { query, findById, findAll, insert, updateById, count } from "@/lib/db"
+import { query, findById, findAll, insert, updateById, count } from "@/lib/db-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"

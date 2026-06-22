@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic"
 
 import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/lib/auth-client"
-import { query, findById, findAll, insert } from "@/lib/db"
+import { query, findById, findAll, insert } from "@/lib/db-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"

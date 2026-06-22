@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-client"
-import { query, findById, findAll, insert, updateById } from "@/lib/db"
+import { query, findById, findAll, insert, updateById } from "@/lib/db-client"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
