@@ -8,7 +8,7 @@ const ALLOWED_TABLES = [
   "chats", "messages",
   "opportunities", "opportunity_applications",
   "challenges", "challenge_participants",
-  "player_ratings", "player_of_week",
+  "player_profiles", "player_ratings", "player_of_week",
   "notifications",
   "badges", "user_badges",
 ]
