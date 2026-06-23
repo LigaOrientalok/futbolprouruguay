@@ -5,7 +5,7 @@ const f = createUploadthing()
 
 export const ourFileRouter = {
   avatarUploader: f({
-    image: { maxFileSize: "2MB", maxFileCount: 1 },
+    image: { maxFileSize: "4MB", maxFileCount: 1 },
   })
     .middleware(async () => {
       const session = await getSession()
