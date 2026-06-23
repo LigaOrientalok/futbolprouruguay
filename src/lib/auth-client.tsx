@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
 export interface AuthUser {
@@ -38,25 +38,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  const refresh = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auth/me")
-      if (res.ok) {
-        const data = await res.json()
-        setUser(data.user)
-      } else {
-        setUser(null)
-      }
-    } catch {
-      setUser(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
   useEffect(() => {
-    refresh()
-  }, [refresh])
+    let cancelled = false
+
+    async function load() {
+      try {
+        const res = await fetch("/api/auth/me")
+        if (cancelled) return
+        if (res.ok) {
+          const data = await res.json()
+          setUser(data.user)
+        } else {
+          setUser(null)
+        }
+      } catch {
+        if (!cancelled) setUser(null)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [])
 
   const pathname = usePathname()
   const publicPaths = ["/", "/auth/login", "/auth/register", "/auth/error"]
@@ -67,6 +71,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push("/auth/login")
     }
   }, [loading, user, isPublic, router])
+
+  const refresh = async () => {
+    try {
+      const res = await fetch("/api/auth/me")
+      if (res.ok) {
+        const data = await res.json()
+        setUser(data.user)
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   const login = async (email: string, password: string) => {
     const res = await fetch("/api/auth/login", {

@@ -33,7 +33,10 @@ export async function POST(req: Request) {
     const password_hash = await hashPassword(password)
     const id = crypto.randomUUID()
 
-    const result = await query<any>(
+    const result = await query<{
+      id: string; email: string; username: string; full_name: string;
+      avatar_url: string | null; role: string; subscription_tier: string; is_suspended: boolean
+    }>(
       `INSERT INTO users (id, email, username, full_name, role, password_hash, subscription_tier)
        VALUES ($1, $2, $3, $4, $5, $6, 'free') RETURNING *`,
       [id, email, username, full_name, role, password_hash]

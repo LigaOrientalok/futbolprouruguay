@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { Send, MessageCircle, Loader2, ArrowLeft } from "lucide-react"
+import { Send, MessageCircle, ArrowLeft } from "lucide-react"
 import { getInitials, formatRelativeTime } from "@/lib/utils"
 import type { Chat, Message, User } from "@/lib/types"
 import { getPusherClient } from "@/lib/pusher/client"
@@ -25,40 +24,6 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [showMobileList, setShowMobileList] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (authLoading) return
-    if (!authUser) {
-      setLoading(false)
-      return
-    }
-    setCurrentUser(authUser as unknown as User)
-    loadChats()
-  }, [authUser, authLoading])
-
-  useEffect(() => {
-    if (activeChat) {
-      loadMessages()
-    }
-  }, [activeChat])
-
-  useEffect(() => {
-    if (!activeChat) return
-    const pc = getPusherClient()
-    if (!pc) return
-    const channel = pc.subscribe(`chat-${activeChat}`)
-    channel.bind("new-message", (data: Message) => {
-      setMessages((prev) => [...prev, data])
-    })
-    return () => {
-      channel.unbind_all()
-      pc.unsubscribe(`chat-${activeChat}`)
-    }
-  }, [activeChat])
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
 
   async function loadChats() {
     if (!authUser) return
@@ -94,6 +59,44 @@ export default function ChatPage() {
     setMessages(data || [])
   }
 
+  useEffect(() => {
+    if (authLoading) return
+    if (authUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCurrentUser(authUser as unknown as User)
+      loadChats()
+    } else {
+      setLoading(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser, authLoading])
+
+  useEffect(() => {
+    if (activeChat) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadMessages()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChat])
+
+  useEffect(() => {
+    if (!activeChat) return
+    const pc = getPusherClient()
+    if (!pc) return
+    const channel = pc.subscribe(`chat-${activeChat}`)
+    channel.bind("new-message", (data: Message) => {
+      setMessages((prev) => [...prev, data])
+    })
+    return () => {
+      channel.unbind_all()
+      pc.unsubscribe(`chat-${activeChat}`)
+    }
+  }, [activeChat])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
   async function sendMessage() {
     if (!newMessage.trim() || !activeChat) return
 
@@ -106,6 +109,7 @@ export default function ChatPage() {
     setNewMessage("")
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function startChat(userId: string) {
     if (!authUser) return
 

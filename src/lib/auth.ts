@@ -2,7 +2,18 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import type { NextAuthConfig } from "next-auth"
+import type { JWT } from "next-auth/jwt"
 import { query } from "./db"
+
+interface AuthUserRow {
+  id: string
+  email: string
+  full_name: string
+  username: string
+  role: string
+  password_hash: string
+  is_suspended: boolean
+}
 
 export const authConfig: NextAuthConfig = {
   pages: {
@@ -13,16 +24,16 @@ export const authConfig: NextAuthConfig = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
-        token.role = (user as any).role
-        token.username = (user as any).username
+        ;(token as JWT & { role?: string }).role = (user as unknown as AuthUserRow).role
+        ;(token as JWT & { username?: string }).username = (user as unknown as AuthUserRow).username
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
-        ;(session.user as any).role = token.role
-        ;(session.user as any).username = token.username
+        ;(session.user as unknown as Record<string, unknown>).role = (token as unknown as JWT & { role?: string }).role
+        ;(session.user as unknown as Record<string, unknown>).username = (token as unknown as JWT & { username?: string }).username
       }
       return session
     },
@@ -50,7 +61,7 @@ export const authConfig: NextAuthConfig = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const users = await query<any>(
+        const users = await query<AuthUserRow>(
           "SELECT * FROM users WHERE email = $1",
           [credentials.email as string]
         )
@@ -58,7 +69,6 @@ export const authConfig: NextAuthConfig = {
 
         if (!user) return null
 
-        // Verificar contraseña (para seed, comparar directo)
         const isValid = user.password_hash
           ? await compare(credentials.password as string, user.password_hash)
           : false
@@ -73,7 +83,7 @@ export const authConfig: NextAuthConfig = {
           name: user.full_name,
           role: user.role,
           username: user.username,
-        }
+        } as never
       },
     }),
   ],

@@ -6,7 +6,7 @@ import Link from "next/link"
 import { findById, findAll, insert, query } from "@/lib/db-client"
 import { useAuth } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MapPin, Users, Calendar, MessageCircle, Loader2, ArrowLeft, Send, UserPlus } from "lucide-react"
+import { MapPin, Users, ArrowLeft, Send, UserPlus } from "lucide-react"
 import { getInitials, formatDate } from "@/lib/utils"
 import { POSITIONS } from "@/lib/constants"
 import type { Team, TeamMember, TeamNeed, User } from "@/lib/types"
@@ -35,6 +35,7 @@ export default function TeamDetailPage() {
 
   useEffect(() => {
     loadTeam()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   async function loadTeam() {
@@ -51,8 +52,8 @@ export default function TeamDetailPage() {
         userMap.set(u.id, u)
       }
     }
-    const membersWithUsers = (membersData || []).map((m) => ({ ...m, user: userMap.get(m.user_id) })) as any
-    setMembers(membersWithUsers)
+    const membersWithUsers = (membersData || []).map((m) => ({ ...m, user: userMap.get(m.user_id) }))
+    setMembers(membersWithUsers as unknown as (TeamMember & { user?: User })[])
 
     if (user) {
       setIsMember(membersData?.some((m) => m.user_id === user.id) || false)

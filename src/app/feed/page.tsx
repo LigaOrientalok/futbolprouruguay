@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import { Heart, MessageCircle, Send, Image, Loader2, Trash2 } from "lucide-react"
+import { Heart, MessageCircle, Send, Image as ImageIcon, Loader2 } from "lucide-react"
 import { getInitials, formatRelativeTime } from "@/lib/utils"
 import type { Post, Comment, User } from "@/lib/types"
 
@@ -24,28 +24,27 @@ export default function FeedPage() {
   const [likedPostIds, setLikedPostIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    if (user) setCurrentUser(user as User)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (user) setCurrentUser(user as unknown as User)
+    else setCurrentUser(null)
   }, [user])
 
-  useEffect(() => {
-    loadPosts()
-  }, [])
-
   async function loadPosts() {
-    const data = await query(
+    type PostRow = Post & { user: Record<string, unknown>; comments?: Comment[] }
+    const data = await query<PostRow>(
       "SELECT p.*, row_to_json(u.*) as user FROM posts p JOIN users u ON u.id = p.user_id ORDER BY p.created_at DESC LIMIT 20"
     )
-    const postsData = (data || []) as any
+    const postsData = data || []
 
     if (postsData.length > 0) {
-      const ids = postsData.map((p: any) => p.id)
-      const placeholders = ids.map((_: any, i: number) => `$${i + 1}`).join(",")
-      const allComments = await query(
+      const ids = postsData.map((p) => p.id)
+      const placeholders = ids.map((_, i) => `$${i + 1}`).join(",")
+      const allComments = await query<Comment>(
         `SELECT * FROM comments WHERE post_id IN (${placeholders}) ORDER BY created_at ASC`,
         ids
       )
-      const grouped: Record<string, any[]> = {}
-      for (const c of (allComments || ([] as any[]))) {
+      const grouped: Record<string, Comment[]> = {}
+      for (const c of (allComments || [])) {
         if (!grouped[c.post_id]) grouped[c.post_id] = []
         grouped[c.post_id].push(c)
       }
@@ -54,18 +53,20 @@ export default function FeedPage() {
       }
     }
 
-    setPosts(postsData)
+    const enriched = postsData.map(p => ({ ...p, user: p.user as unknown as User }))
+    setPosts(enriched)
     setLoading(false)
+    const current = currentUser
 
-    if (currentUser) {
-      const postIds = postsData.map((p: any) => p.id)
+    if (current) {
+      const postIds = postsData.map((p) => p.id)
       if (postIds.length > 0) {
-        const placeholders = postIds.map((_: any, i: number) => `$${i + 1}`).join(",")
-        const userLikes = await query(
+        const placeholders = postIds.map((_, i) => `$${i + 1}`).join(",")
+        const userLikes = await query<{ post_id: string }>(
           `SELECT post_id FROM likes WHERE user_id = $${postIds.length + 1} AND post_id IN (${placeholders})`,
-          [...postIds, currentUser.id]
+          [...postIds, current.id]
         )
-        setLikedPostIds(new Set((userLikes || []).map((l: any) => l.post_id)))
+        setLikedPostIds(new Set((userLikes || []).map((l) => l.post_id)))
       }
     }
   }
@@ -88,7 +89,7 @@ export default function FeedPage() {
 
   async function toggleLike(postId: string) {
     if (!currentUser) return
-    const existingLikes = await findAll("likes", {
+    const existingLikes = await findAll<{ id: string }>("likes", {
       where: "post_id = $1 AND user_id = $2",
       params: [postId, currentUser.id],
     })
@@ -96,16 +97,16 @@ export default function FeedPage() {
 
     if (existingLike) {
       await query("DELETE FROM likes WHERE id = $1", [existingLike.id])
-      const post = await findById("posts", postId)
+      const post = await findById<Record<string, unknown>>("posts", postId)
       if (post) {
-        await updateById("posts", postId, { likes_count: ((post as any).likes_count || 0) - 1 })
+        await updateById("posts", postId, { likes_count: ((post.likes_count as number) || 0) - 1 })
       }
       setLikedPostIds(prev => { const s = new Set(prev); s.delete(postId); return s })
     } else {
-      await insert("likes", { post_id: postId, user_id: currentUser.id } as any)
-      const post = await findById("posts", postId)
+      await insert("likes", { post_id: postId, user_id: currentUser.id })
+      const post = await findById<Record<string, unknown>>("posts", postId)
       if (post) {
-        await updateById("posts", postId, { likes_count: ((post as any).likes_count || 0) + 1 })
+        await updateById("posts", postId, { likes_count: ((post.likes_count as number) || 0) + 1 })
       }
       setLikedPostIds(prev => { const s = new Set(prev); s.add(postId); return s })
     }
@@ -120,11 +121,11 @@ export default function FeedPage() {
       post_id: postId,
       user_id: currentUser.id,
       content: text,
-    } as any)
+    })
 
-    const post = await findById("posts", postId)
+    const post = await findById<Record<string, unknown>>("posts", postId)
     if (post) {
-      await updateById("posts", postId, { comments_count: ((post as any).comments_count || 0) + 1 })
+      await updateById("posts", postId, { comments_count: ((post.comments_count as number) || 0) + 1 })
     }
 
     setCommentInputs({ ...commentInputs, [postId]: "" })
@@ -158,7 +159,7 @@ export default function FeedPage() {
               <div className="flex items-center justify-between">
                 <div className="flex gap-1">
                   <Button variant="ghost" size="sm" disabled>
-                    <Image className="h-4 w-4" />
+                    <ImageIcon className="h-4 w-4" />
                   </Button>
                 </div>
                 <Button size="sm" onClick={createPost} disabled={!newPost.trim() || posting}>

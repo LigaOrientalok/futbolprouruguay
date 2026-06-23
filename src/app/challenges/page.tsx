@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-client"
-import { query, findById, findAll, insert, updateById, count } from "@/lib/db-client"
+import { query, findAll, insert, updateById } from "@/lib/db-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Clock, MapPin, Plus, Loader2, Swords, Check, X } from "lucide-react"
+import { Calendar, Clock, MapPin, Plus, Loader2, Swords, Check } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { CATEGORIES } from "@/lib/constants"
 import type { Challenge, Team } from "@/lib/types"
@@ -36,16 +36,19 @@ export default function ChallengesPage() {
 
   useEffect(() => {
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function loadData() {
     if (user) {
       const teams = await findAll("teams", { where: "created_by = $1", params: [user.id] })
-      setMyTeams((teams || []) as any)
+      setMyTeams((teams || []) as Team[])
     }
 
     const data = await query("SELECT c.*, row_to_json(t.*) as team FROM challenges c JOIN teams t ON t.id = c.team_id ORDER BY c.created_at DESC")
-    setChallenges((data || []) as any)
+    type ChallengeRow = Challenge & { team: Record<string, unknown> }
+    const rows = (data || []) as unknown as ChallengeRow[]
+    setChallenges(rows.map(r => ({ ...r, team: r.team as unknown as Team })))
     setLoading(false)
   }
 

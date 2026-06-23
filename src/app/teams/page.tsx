@@ -5,7 +5,7 @@ import Link from "next/link"
 import { findAll } from "@/lib/db-client"
 import { useAuth } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
@@ -18,23 +18,23 @@ export default function TeamsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("")
-  const { user } = useAuth()
+  useAuth()
 
   useEffect(() => {
-    loadTeams()
+    ;(async () => {
+      setLoading(true)
+      const opts: Record<string, unknown> = { orderBy: "created_at DESC" }
+      if (categoryFilter) {
+        opts.where = "category = $1"
+        opts.params = [categoryFilter]
+      }
+      const data = await findAll<Team>("teams", opts as Parameters<typeof findAll<Team>>[1])
+      setTeams(data || [])
+      setLoading(false)
+    })()
   }, [categoryFilter])
 
-  async function loadTeams() {
-    setLoading(true)
-    const opts: any = { orderBy: "created_at DESC" }
-    if (categoryFilter) {
-      opts.where = "category = $1"
-      opts.params = [categoryFilter]
-    }
-    const data = await findAll<Team>("teams", opts)
-    setTeams(data || [])
-    setLoading(false)
-  }
+
 
   const filteredTeams = teams.filter((team) => {
     if (!searchQuery) return true

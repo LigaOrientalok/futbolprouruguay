@@ -2,6 +2,18 @@ import { NextResponse } from "next/server"
 import { query } from "@/lib/db"
 import { createSessionToken, setSessionCookie, verifyPassword } from "@/lib/auth-server"
 
+interface UserRow {
+  id: string
+  email: string
+  username: string
+  full_name: string
+  avatar_url: string | null
+  role: string
+  subscription_tier: string
+  is_suspended: boolean
+  password_hash: string
+}
+
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json()
@@ -10,7 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email y contraseña requeridos" }, { status: 400 })
     }
 
-    const users = await query<any>("SELECT * FROM users WHERE email = $1", [email])
+    const users = await query<UserRow>("SELECT * FROM users WHERE email = $1", [email])
     const user = users[0]
 
     if (!user) {

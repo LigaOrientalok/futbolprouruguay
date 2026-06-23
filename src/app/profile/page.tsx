@@ -12,8 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, Camera, Save, User, Shield, Star, Trophy, Medal, Upload, CheckCircle2, AlertCircle } from "lucide-react"
+import { Loader2, Camera, Save, Shield, Star, Trophy, Medal, CheckCircle2, AlertCircle } from "lucide-react"
 import { getInitials } from "@/lib/utils"
 import { POSITIONS, CATEGORIES, LEVELS, AVAILABILITIES, LEGS } from "@/lib/constants"
 import type { User as UserType, PlayerProfile, Badge as BadgeType } from "@/lib/types"
@@ -92,7 +91,12 @@ export default function ProfilePage() {
     setLoading(false)
   }, [authUser, router])
 
-  useEffect(() => { loadProfile() }, [loadProfile])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (authUser) loadProfile()
+    else router.push("/auth/login")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadProfile])
 
   const handleSave = async () => {
     if (!authUser) return

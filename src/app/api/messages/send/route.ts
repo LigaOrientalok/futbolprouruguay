@@ -3,6 +3,18 @@ import { query, updateById } from "@/lib/db"
 import { pusherServer } from "@/lib/pusher/server"
 import { getCurrentUser } from "@/lib/auth-server"
 
+interface ChatRow {
+  participants: string[]
+}
+
+interface MessageRow {
+  id: string
+  chat_id: string
+  sender_id: string
+  content: string
+  created_at: string
+}
+
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser()
@@ -15,7 +27,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Datos inválidos" }, { status: 400 })
     }
 
-    const chats = await query<any>(
+    const chats = await query<ChatRow>(
       "SELECT participants FROM chats WHERE id = $1",
       [chatId]
     )
@@ -26,7 +38,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
 
-    const result = await query<any>(
+    const result = await query<MessageRow>(
       `INSERT INTO messages (chat_id, sender_id, content) VALUES ($1, $2, $3) RETURNING *`,
       [chatId, user.id, content.trim()]
     )

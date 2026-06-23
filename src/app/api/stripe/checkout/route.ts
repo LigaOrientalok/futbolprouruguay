@@ -11,16 +11,16 @@ export async function POST() {
     }
 
     const { default: Stripe } = await import("stripe")
-    const stripe = new (Stripe as any)(process.env.STRIPE_SECRET_KEY!)
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
     // Crear o recuperar customer de Stripe
-    const subscriptions = await findAll<any>("subscriptions", {
+    const subscriptions = await findAll<{ id: string; stripe_customer_id: string | null }>("subscriptions", {
       where: "user_id = $1",
       params: [user.id],
     })
     const subscription = subscriptions[0]
 
-    let customerId: string | undefined = subscription?.stripe_customer_id
+    let customerId: string | null | undefined = subscription?.stripe_customer_id
 
     if (!customerId) {
       const customer = await stripe.customers.create({

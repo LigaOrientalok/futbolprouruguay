@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
 import { useAuth } from "@/lib/auth-client"
 import { query } from "@/lib/db-client"
 import { Button } from "@/components/ui/button"
@@ -10,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, MapPin, Filter, X, MessageCircle } from "lucide-react"
+import { Search, MapPin, Filter, X } from "lucide-react"
 import { getInitials } from "@/lib/utils"
 import { POSITIONS, CATEGORIES, LEVELS, AVAILABILITIES } from "@/lib/constants"
 import type { User, PlayerProfile } from "@/lib/types"
@@ -19,7 +18,7 @@ export default function SearchPage() {
   const [results, setResults] = useState<(User & { profile?: PlayerProfile })[]>([])
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
-  const { user, loading: authLoading } = useAuth()
+  useAuth()
 
   const [filters, setFilters] = useState({
     query: "",
@@ -32,6 +31,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     searchPlayers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.category, filters.level, filters.availability, filters.position])
 
   async function searchPlayers() {
@@ -74,22 +74,23 @@ export default function SearchPage() {
 
     sql += ` ORDER BY u.subscription_tier DESC LIMIT 50`
 
-    const data = await query(sql, params)
-    let filtered = (Array.isArray(data) ? data : []).map((u: any) => ({
-      ...u,
-      profile: typeof u.profile === "string" ? JSON.parse(u.profile) : u.profile
-    }))
+    const data = await query<Record<string, unknown>>(sql, params)
+    let filtered: Record<string, unknown>[] = Array.isArray(data) ? data : []
 
     if (filters.query) {
       const q = filters.query.toLowerCase()
-      filtered = filtered.filter((u: any) =>
-        u.full_name?.toLowerCase().includes(q) ||
-        u.username?.toLowerCase().includes(q) ||
-        u.profile?.city?.toLowerCase().includes(q)
+      filtered = filtered.filter((u) =>
+        (u.full_name as string)?.toLowerCase().includes(q) ||
+        (u.username as string)?.toLowerCase().includes(q) ||
+        ((u.profile as Record<string, string>)?.city ?? "").toLowerCase().includes(q)
       )
     }
 
-    setResults(filtered as any)
+    const mapped = filtered.map((u) => ({
+      ...u,
+      profile: typeof u.profile === "string" ? JSON.parse(u.profile as string) : u.profile
+    }))
+    setResults(mapped as unknown as (User & { profile?: PlayerProfile })[])
     setLoading(false)
   }
 
@@ -180,8 +181,8 @@ export default function SearchPage() {
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {results.map((user: any) => {
-            const profile = user.profile as PlayerProfile | null
+          {results.map((user) => {
+            const profile = user.profile ?? null
             return (
               <Card key={user.id} className="hover:bg-accent/50 transition-colors">
                 <CardContent className="p-4">

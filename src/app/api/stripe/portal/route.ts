@@ -10,7 +10,7 @@ export async function POST() {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const subscriptions = await findAll<any>("subscriptions", {
+    const subscriptions = await findAll<{ stripe_customer_id: string | null }>("subscriptions", {
       where: "user_id = $1",
       params: [user.id],
     })
@@ -24,7 +24,7 @@ export async function POST() {
     }
 
     const { default: Stripe } = await import("stripe")
-    const stripe = new (Stripe as any)(process.env.STRIPE_SECRET_KEY!)
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,

@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Check, Shield, Star, Zap, BarChart3, Crown, Loader2, ArrowLeft } from "lucide-react"
+import { Check, Crown, Zap } from "lucide-react"
 import Link from "next/link"
 
 export default function PremiumPage() {

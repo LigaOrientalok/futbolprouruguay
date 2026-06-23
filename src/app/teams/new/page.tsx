@@ -45,8 +45,8 @@ export default function NewTeamPage() {
         created_by: user.id,
         is_active: true,
       })
-    } catch (err: any) {
-      setError(err.message || "Error al crear el equipo")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al crear el equipo")
       setLoading(false)
       return
     }

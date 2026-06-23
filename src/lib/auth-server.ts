@@ -79,10 +79,21 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return await compare(password, hash)
 }
 
-export async function getCurrentUser() {
+interface UserRow {
+  id: string
+  email: string
+  username: string
+  full_name: string
+  avatar_url: string | null
+  role: string
+  subscription_tier: string
+  is_suspended: boolean
+}
+
+export async function getCurrentUser(): Promise<UserRow | null> {
   const session = await getSession()
   if (!session) return null
   
-  const users = await query<any>("SELECT * FROM users WHERE id = $1", [session.userId])
+  const users = await query<UserRow>("SELECT * FROM users WHERE id = $1", [session.userId])
   return users[0] || null
 }

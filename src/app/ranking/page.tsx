@@ -6,32 +6,32 @@ import { query } from "@/lib/db-client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trophy, Medal, Star, TrendingUp, Award, MapPin, Target, Clock } from "lucide-react"
+import { Medal, Star, TrendingUp, Award, MapPin, Target, Clock } from "lucide-react"
 import { getInitials } from "@/lib/utils"
-import { POSITIONS } from "@/lib/constants"
 import type { User, PlayerProfile } from "@/lib/types"
 
 export default function RankingPage() {
   const [players, setPlayers] = useState<(User & { profile?: PlayerProfile })[]>([])
   const [loading, setLoading] = useState(true)
-  const { user, loading: authLoading } = useAuth()
-
-  useEffect(() => {
-    loadPlayers()
-  }, [])
+  useAuth()
 
   async function loadPlayers() {
+    type PlayerRow = User & { profile: string | Record<string, unknown> }
     const sql = `SELECT u.*, row_to_json(pp.*) as profile FROM users u LEFT JOIN player_profiles pp ON pp.user_id = u.id WHERE u.role != 'admin' ORDER BY u.subscription_tier DESC LIMIT 20`
-    const data = await query(sql)
-    const rows = (Array.isArray(data) ? data : []).map((u: any) => ({
+    const data = await query<PlayerRow>(sql)
+    const rows = (Array.isArray(data) ? data : []).map((u) => ({
       ...u,
       profile: typeof u.profile === "string" ? JSON.parse(u.profile) : u.profile
     }))
-    setPlayers(rows as any)
+    setPlayers(rows as unknown as (User & { profile?: PlayerProfile })[])
     setLoading(false)
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadPlayers()
+  }, [])
 
   if (loading) {
     return (
@@ -57,8 +57,8 @@ export default function RankingPage() {
 
         <TabsContent value="top" className="space-y-4 mt-4">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {players.map((player: any, index) => {
-              const profile = player.profile as PlayerProfile | null
+            {players.map((player, index) => {
+              const profile = player.profile ?? null
               return (
                 <Card key={player.id} className={index < 3 ? "border-primary/30" : ""}>
                   <CardContent className="p-4">
@@ -111,8 +111,8 @@ export default function RankingPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {players.slice(0, 6).map((player: any) => {
-                  const profile = player.profile as PlayerProfile | null
+                {players.slice(0, 6).map((player) => {
+              const profile = player.profile ?? null
                   return (
                     <div key={player.id} className="flex items-center gap-3 p-3 rounded-lg border">
                       <Avatar className="h-10 w-10">

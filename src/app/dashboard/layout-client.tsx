@@ -4,13 +4,12 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-client"
-import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useTheme } from "next-themes"
 import { 
   LayoutDashboard, Users, Search, Calendar, MessageCircle, 
-  Trophy, Sun, Moon, Menu, X, LogOut, Bell, Star, 
-  Swords, ShoppingBag, Settings, Award
+  Trophy, Sun, Moon, Menu, X, LogOut, Star, 
+  Swords, ShoppingBag, Award
 } from "lucide-react"
 import { getInitials } from "@/lib/utils"
 

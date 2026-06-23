@@ -6,11 +6,10 @@ import { useAuth } from "@/lib/auth-client"
 import { query, findById, count } from "@/lib/db-client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Users, Trophy, Calendar, MessageCircle, TrendingUp, ArrowRight, Star } from "lucide-react"
 import { getInitials, formatRelativeTime } from "@/lib/utils"
-import type { User, Post, Team, Opportunity, Challenge } from "@/lib/types"
+import type { User, Post } from "@/lib/types"
 
 export default function DashboardPage() {
   const { user: authUser } = useAuth()

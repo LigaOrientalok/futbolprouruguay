@@ -2,12 +2,12 @@ type RequestBody = {
   action: string
   table?: string
   id?: string
-  data?: Record<string, any>
+  data?: Record<string, unknown>
   sql?: string
-  params?: any[]
+  params?: unknown[]
   options?: {
     where?: string
-    params?: any[]
+    params?: unknown[]
     orderBy?: string
     limit?: number
     offset?: number
@@ -15,7 +15,7 @@ type RequestBody = {
   where?: string
 }
 
-async function apiCall<T = any>(body: RequestBody): Promise<T> {
+async function apiCall<T>(body: RequestBody): Promise<T> {
   const res = await fetch("/api/db", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -26,19 +26,19 @@ async function apiCall<T = any>(body: RequestBody): Promise<T> {
   return json.data as T
 }
 
-export type QueryResult<T = any> = T[]
+export type QueryResult<T> = T[]
 
-export async function query<T = any>(sql: string, params?: any[]): Promise<QueryResult<T>> {
+export async function query<T>(sql: string, params?: unknown[]): Promise<T[]> {
   return apiCall<T[]>({ action: "query", sql, params })
 }
 
-export async function findById<T = any>(table: string, id: string): Promise<T | null> {
+export async function findById<T>(table: string, id: string): Promise<T | null> {
   return apiCall<T | null>({ action: "findById", table, id })
 }
 
-export async function findAll<T = any>(table: string, options?: {
+export async function findAll<T>(table: string, options?: {
   where?: string
-  params?: any[]
+  params?: unknown[]
   orderBy?: string
   limit?: number
   offset?: number
@@ -46,11 +46,11 @@ export async function findAll<T = any>(table: string, options?: {
   return apiCall<T[]>({ action: "findAll", table, options })
 }
 
-export async function insert<T = any>(table: string, data: Record<string, any>): Promise<T | null> {
+export async function insert<T>(table: string, data: Record<string, unknown>): Promise<T | null> {
   return apiCall<T | null>({ action: "insert", table, data })
 }
 
-export async function updateById<T = any>(table: string, id: string, data: Record<string, any>): Promise<T | null> {
+export async function updateById<T>(table: string, id: string, data: Record<string, unknown>): Promise<T | null> {
   return apiCall<T | null>({ action: "updateById", table, id, data })
 }
 
@@ -58,10 +58,10 @@ export async function remove(table: string, id: string): Promise<boolean> {
   return apiCall<boolean>({ action: "remove", table, id })
 }
 
-export async function count(table: string, where?: string, params?: any[]): Promise<number> {
+export async function count(table: string, where?: string, params?: unknown[]): Promise<number> {
   return apiCall<number>({ action: "count", table, where, params })
 }
 
-export async function queryRaw<T = any>(sqlText: string, params?: any[]): Promise<T[]> {
+export async function queryRaw<T>(sqlText: string, params?: unknown[]): Promise<T[]> {
   return apiCall<T[]>({ action: "queryRaw", sql: sqlText, params })
 }

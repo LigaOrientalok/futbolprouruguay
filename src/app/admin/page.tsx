@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, Trophy, Calendar, Star, Shield, Loader2, Ban, CheckCircle, XCircle } from "lucide-react"
+import { Users, Trophy, Calendar, Star, Shield, Ban, CheckCircle } from "lucide-react"
 import { getInitials } from "@/lib/utils"
 import type { User } from "@/lib/types"
 
@@ -29,6 +29,7 @@ export default function AdminPage() {
     if (authLoading) return
     if (!user) { router.push("/auth/login"); return }
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, router])
 
   async function loadData() {

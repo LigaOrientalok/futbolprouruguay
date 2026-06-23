@@ -9,29 +9,29 @@ export function getPool(): Pool {
   return pool
 }
 
-export type QueryResult<T = any> = T[]
+export type QueryResult<T> = T[]
 
-export async function query<T = any>(sql: string, params?: any[]): Promise<QueryResult<T>> {
+export async function query<T>(sql: string, params?: unknown[]): Promise<T[]> {
   const client = getPool()
   const result = await client.query(sql, params)
   return result.rows as T[]
 }
 
 // Helpers específicos para tablas comunes
-export async function findById<T = any>(table: string, id: string): Promise<T | null> {
+export async function findById<T>(table: string, id: string): Promise<T | null> {
   const rows = await query<T>(`SELECT * FROM ${table} WHERE id = $1`, [id])
   return rows[0] || null
 }
 
-export async function findAll<T = any>(table: string, options?: {
+export async function findAll<T>(table: string, options?: {
   where?: string
-  params?: any[]
+  params?: unknown[]
   orderBy?: string
   limit?: number
   offset?: number
 }): Promise<T[]> {
   let sqlText = `SELECT * FROM ${table}`
-  const allParams: any[] = []
+  const allParams: unknown[] = []
   
   if (options?.where) {
     sqlText += ` WHERE ${options.where}`
@@ -44,7 +44,7 @@ export async function findAll<T = any>(table: string, options?: {
   return await query<T>(sqlText, allParams.length > 0 ? allParams : undefined)
 }
 
-export async function insert<T = any>(table: string, data: Record<string, any>): Promise<T | null> {
+export async function insert<T>(table: string, data: Record<string, unknown>): Promise<T | null> {
   const keys = Object.keys(data)
   const values = Object.values(data)
   const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ")
@@ -57,7 +57,7 @@ export async function insert<T = any>(table: string, data: Record<string, any>):
   return rows[0] || null
 }
 
-export async function updateById<T = any>(table: string, id: string, data: Record<string, any>): Promise<T | null> {
+export async function updateById<T>(table: string, id: string, data: Record<string, unknown>): Promise<T | null> {
   const keys = Object.keys(data)
   const values = Object.values(data)
   const setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(", ")
@@ -74,7 +74,7 @@ export async function remove(table: string, id: string): Promise<boolean> {
   return result.length > 0
 }
 
-export async function count(table: string, where?: string, params?: any[]): Promise<number> {
+export async function count(table: string, where?: string, params?: unknown[]): Promise<number> {
   let sqlText = `SELECT COUNT(*) as count FROM ${table}`
   if (where) {
     sqlText += ` WHERE ${where}`
@@ -84,6 +84,6 @@ export async function count(table: string, where?: string, params?: any[]): Prom
 }
 
 // Para joins y queries más complejas
-export async function queryRaw<T = any>(sqlText: string, params?: any[]): Promise<T[]> {
+export async function queryRaw<T>(sqlText: string, params?: unknown[]): Promise<T[]> {
   return await query<T>(sqlText, params)
 }

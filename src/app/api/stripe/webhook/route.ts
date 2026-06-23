@@ -4,17 +4,17 @@ import { query } from "@/lib/db"
 export async function POST(req: Request) {
   try {
     const { default: Stripe } = await import("stripe")
-    const stripe = new (Stripe as any)(process.env.STRIPE_SECRET_KEY!)
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
     const body = await req.text()
     const signature = req.headers.get("stripe-signature")!
 
-    let event: any
+    let event: { type: string; data: { object: Record<string, unknown> } }
 
     try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret) as unknown as typeof event
     } catch (err) {
       console.error("Webhook signature verification failed:", err)
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
   switch (event.type) {
     case "checkout.session.completed": {
-      const session = event.data.object as any
+      const session = event.data.object as { metadata?: Record<string, string>; subscription?: string; customer?: string }
       const userId = session.metadata?.user_id
 
       if (userId && session.subscription) {
@@ -38,8 +38,8 @@ export async function POST(req: Request) {
              current_period_end = EXCLUDED.current_period_end`,
           [
             userId,
-            session.customer as string,
-            session.subscription as string,
+            session.customer,
+            session.subscription,
             "premium",
             "active",
             new Date().toISOString(),
@@ -66,10 +66,10 @@ export async function POST(req: Request) {
 
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
-      const subscription = event.data.object as any
-      const customerId = subscription.customer as string
+      const subscription = event.data.object as unknown as { customer: string; status: string; current_period_end: number }
+      const customerId = subscription.customer
 
-      const rows = await query<any>(
+      const rows = await query<{ user_id: string }>(
         "SELECT user_id FROM subscriptions WHERE stripe_customer_id = $1",
         [customerId]
       )
