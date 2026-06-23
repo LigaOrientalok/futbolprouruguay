@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FutbolMatch Uruguay
 
-## Getting Started
+**Encontrá tu equipo, viví el fútbol.**
 
-First, run the development server:
+FutbolMatch es la red social de fútbol amateur en Uruguay. Conecta jugadores y equipos, permitiendo buscar talento, organizar partidos, chatear en tiempo real y gestionar toda la actividad futbolística amateur.
+
+## Stack
+
+- **Framework:** [Next.js 16](https://nextjs.org) con React 19
+- **Lenguaje:** TypeScript
+- **Estilos:** Tailwind CSS v4 + Radix UI + shadcn/ui
+- **Base de datos:** PostgreSQL en [Neon](https://neon.tech) (serverless)
+- **ORM:** Capa custom sobre SQL parametrizado
+- **Auth:** JWT + bcryptjs con cookies
+- **Tiempo real:** Pusher (chat privado)
+- **Pagos:** Stripe (checkout + webhooks)
+- **Uploads:** UploadThing
+- **Hosting:** Vercel
+
+## Funcionalidades
+
+| Ruta | Descripción |
+|---|---|
+| `/` | Landing page pública con pricing |
+| `/auth/login` · `/auth/register` | Autenticación |
+| `/dashboard` | Panel principal con resumen y acceso rápido |
+| `/profile` | Perfil de jugador (editable) |
+| `/teams` · `/teams/new` · `/teams/[id]` | Explorar, crear y ver equipos |
+| `/search` | Búsqueda avanzada de jugadores |
+| `/opportunities` | Oportunidades para unirte a equipos |
+| `/challenges` | Desafíos entre equipos |
+| `/chat` | Mensajería en tiempo real |
+| `/feed` | Red social con posts, likes y comentarios |
+| `/ranking` | Ranking de jugadores |
+| `/premium` | Plan premium ($9.99/mes) |
+| `/admin` | Panel de administración |
+
+## Categorías
+
+- +18, +30, +40
+- Posiciones: Arquero, Defensa, Mediocampo, Delantero, etc.
+- Niveles: Principiante, Intermedio, Avanzado
+
+## Cómo empezar
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Requiere variables de entorno para Neon DB, Supabase Auth, Pusher, Stripe y UploadThing.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Licencia
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Uso privado.
