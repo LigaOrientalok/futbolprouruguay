@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { query } from "@/lib/db"
-import { createSession, hashPassword } from "@/lib/auth-server"
+import { createSessionToken, hashPassword, COOKIE_NAME } from "@/lib/auth-server"
 
 const ALLOWED_ROLES = ["player", "captain"]
 
@@ -43,8 +43,8 @@ export async function POST(req: Request) {
     )
 
     const user = result[0]
-    await createSession(user.id, user.role)
-    return NextResponse.json({
+    const token = await createSessionToken(user.id, user.role)
+    const response = NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
@@ -56,6 +56,14 @@ export async function POST(req: Request) {
         is_suspended: user.is_suspended,
       },
     })
+    response.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60,
+      path: "/",
+    })
+    return response
   } catch (error) {
     console.error("Register error:", error)
     return NextResponse.json({ error: "Error del servidor" }, { status: 500 })

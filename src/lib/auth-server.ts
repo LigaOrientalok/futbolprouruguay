@@ -8,7 +8,7 @@ const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET || "fallback-secret-change-in-production"
 )
 
-const COOKIE_NAME = "session"
+export const COOKIE_NAME = "session"
 
 export async function createSession(userId: string, role: string) {
   const token = await new SignJWT({ userId, role })
