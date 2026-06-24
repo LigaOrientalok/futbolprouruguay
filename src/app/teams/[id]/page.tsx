@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { findById, findAll, insert, updateById, query } from "@/lib/db-client"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { getTeamById, getTeamMembers, getTeamNeeds, getMultipleUsers, addTeamNeed, applyToTeam, updateTeamBadge } from "@/lib/actions"
 import { useAuth } from "@/lib/auth-client"
 import { uploadFiles } from "@/lib/uploadthing"
 import { Button } from "@/components/ui/button"
@@ -18,22 +19,51 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MapPin, Users, ArrowLeft, Send, UserPlus, Home, Upload } from "lucide-react"
 import { getInitials, formatDate } from "@/lib/utils"
 import { POSITIONS } from "@/lib/constants"
-import type { Team, TeamMember, TeamNeed, User } from "@/lib/types"
+import type { Team, TeamMember, User } from "@/lib/types"
 
 export default function TeamDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [team, setTeam] = useState<Team | null>(null)
-  const [members, setMembers] = useState<(TeamMember & { user?: User })[]>([])
-  const [needs, setNeeds] = useState<TeamNeed[]>([])
-  const [isMember, setIsMember] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const [newNeedPosition, setNewNeedPosition] = useState("")
   const [newNeedDesc, setNewNeedDesc] = useState("")
   const [applicationMsg, setApplicationMsg] = useState("")
   const [showApply, setShowApply] = useState(false)
   const [badgeUploading, setBadgeUploading] = useState(false)
-  const { user } = useAuth()
-  const router = useRouter()
+
+  const { data: team, isLoading: teamLoading } = useQuery({
+    queryKey: ["team", id],
+    queryFn: () => getTeamById(id),
+  })
+
+  const { data: members = [] } = useQuery({
+    queryKey: ["team-members", id],
+    queryFn: async () => {
+      const data = await getTeamMembers(id)
+      const userIds = [...new Set(data.map((m) => m.user_id))]
+      const users = await getMultipleUsers(userIds)
+      const userMap = new Map(users.map((u) => [u.id, u]))
+      return data.map((m) => ({ ...m, user: userMap.get(m.user_id) })) as (TeamMember & { user?: User })[]
+    },
+    enabled: !!team,
+  })
+
+  const { data: needs = [] } = useQuery({
+    queryKey: ["team-needs", id],
+    queryFn: () => getTeamNeeds(id),
+    enabled: !!team,
+  })
+
+  if (teamLoading || !team) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    )
+  }
+
+  const isMember = members.some((m) => m.user_id === user?.id)
 
   const handleBadgeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -43,8 +73,8 @@ export default function TeamDetailPage() {
       const res = await uploadFiles("teamBadge", { files: [file] })
       const url = res?.[0]?.ufsUrl
       if (url) {
-        await updateById("teams", team.id, { badge_url: url })
-        setTeam({ ...team, badge_url: url })
+        await updateTeamBadge(team.id, url)
+        queryClient.invalidateQueries({ queryKey: ["team", id] })
       }
     } catch {
       console.error("Error al subir escudo")
@@ -52,68 +82,19 @@ export default function TeamDetailPage() {
     setBadgeUploading(false)
   }
 
-  useEffect(() => {
-    loadTeam()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
-
-  async function loadTeam() {
-    const teamData = await findById<Team>("teams", id as string)
-    if (!teamData) { router.push("/teams"); return }
-    setTeam(teamData)
-
-    const membersData = await findAll<TeamMember>("team_members", { where: "team_id = $1", params: [id] })
-    const userIds = [...new Set((membersData || []).map((m) => m.user_id))]
-    const userMap = new Map<string, User>()
-    if (userIds.length > 0) {
-      const usersResult = await query<User>("SELECT * FROM users WHERE id = ANY($1::uuid[])", [userIds])
-      for (const u of usersResult) {
-        userMap.set(u.id, u)
-      }
-    }
-    const membersWithUsers = (membersData || []).map((m) => ({ ...m, user: userMap.get(m.user_id) }))
-    setMembers(membersWithUsers as unknown as (TeamMember & { user?: User })[])
-
-    if (user) {
-      setIsMember(membersData?.some((m) => m.user_id === user.id) || false)
-    }
-
-    const needsData = await findAll<TeamNeed>("team_needs", { where: "team_id = $1 AND is_active = $2", params: [id, true] })
-    setNeeds(needsData || [])
-    setLoading(false)
-  }
-
-  const addNeed = async () => {
+  const handleAddNeed = async () => {
     if (!newNeedPosition || !user) return
-    await insert("team_needs", {
-      team_id: id,
-      position: newNeedPosition,
-      description: newNeedDesc,
-      is_active: true,
-    })
+    await addTeamNeed(id, newNeedPosition, newNeedDesc)
     setNewNeedPosition("")
     setNewNeedDesc("")
-    loadTeam()
+    queryClient.invalidateQueries({ queryKey: ["team-needs", id] })
   }
 
-  const applyToTeam = async () => {
+  const handleApply = async () => {
     if (!user) return
-    await insert("player_applications", {
-      player_id: user.id,
-      team_id: id,
-      message: applicationMsg,
-      status: "pending",
-    })
+    await applyToTeam(id, applicationMsg)
     setShowApply(false)
     setApplicationMsg("")
-  }
-
-  if (loading || !team) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    )
   }
 
   return (
@@ -184,7 +165,7 @@ export default function TeamDetailPage() {
           <CardContent className="p-4 space-y-3">
             <Label>Mensaje para el equipo</Label>
             <Textarea value={applicationMsg} onChange={(e) => setApplicationMsg(e.target.value)} placeholder="Contá por qué querés unirte..." />
-            <Button onClick={applyToTeam}><Send className="h-4 w-4 mr-2" />Enviar solicitud</Button>
+            <Button onClick={handleApply}><Send className="h-4 w-4 mr-2" />Enviar solicitud</Button>
           </CardContent>
         </Card>
       )}
@@ -232,7 +213,7 @@ export default function TeamDetailPage() {
                   </Select>
                   <Input value={newNeedDesc} onChange={(e) => setNewNeedDesc(e.target.value)} placeholder="Descripción (opcional)" />
                 </div>
-                <Button size="sm" onClick={addNeed}>Agregar</Button>
+                <Button size="sm" onClick={handleAddNeed}>Agregar</Button>
               </CardContent>
             </Card>
           )}

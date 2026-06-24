@@ -79,15 +79,20 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return await compare(password, hash)
 }
 
-interface UserRow {
+import type { UserRole, SubscriptionTier } from "./types"
+
+export interface UserRow {
   id: string
   email: string
   username: string
   full_name: string
   avatar_url: string | null
-  role: string
-  subscription_tier: string
+  role: UserRole
+  subscription_tier: SubscriptionTier
   is_suspended: boolean
+  is_verified: boolean
+  created_at: string
+  updated_at: string
 }
 
 export async function getCurrentUser(): Promise<UserRow | null> {

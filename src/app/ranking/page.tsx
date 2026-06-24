@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useAuth } from "@/lib/auth-client"
-import { query } from "@/lib/db-client"
+import { useQuery } from "@tanstack/react-query"
+import { getRankingPlayers } from "@/lib/actions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -12,28 +11,12 @@ import { getInitials } from "@/lib/utils"
 import type { User, PlayerProfile } from "@/lib/types"
 
 export default function RankingPage() {
-  const [players, setPlayers] = useState<(User & { profile?: PlayerProfile })[]>([])
-  const [loading, setLoading] = useState(true)
-  useAuth()
+  const { data: players = [], isLoading } = useQuery({
+    queryKey: ["ranking"],
+    queryFn: () => getRankingPlayers(),
+  })
 
-  async function loadPlayers() {
-    type PlayerRow = User & { profile: string | Record<string, unknown> }
-    const sql = `SELECT u.*, row_to_json(pp.*) as profile FROM users u LEFT JOIN player_profiles pp ON pp.user_id = u.id WHERE u.role != 'admin' ORDER BY u.subscription_tier DESC LIMIT 20`
-    const data = await query<PlayerRow>(sql)
-    const rows = (Array.isArray(data) ? data : []).map((u) => ({
-      ...u,
-      profile: typeof u.profile === "string" ? JSON.parse(u.profile) : u.profile
-    }))
-    setPlayers(rows as unknown as (User & { profile?: PlayerProfile })[])
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadPlayers()
-  }, [])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />

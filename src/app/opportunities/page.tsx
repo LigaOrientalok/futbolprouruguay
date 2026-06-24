@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { getOpportunities, getUserTeams, createOpportunity, applyToOpportunity } from "@/lib/actions"
 import { useAuth } from "@/lib/auth-client"
-import { query, findAll, insert } from "@/lib/db-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,13 +15,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Calendar, MapPin, Plus, Loader2, Send, Building2 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { POSITIONS, CATEGORIES } from "@/lib/constants"
-import type { Opportunity, Team } from "@/lib/types"
 
 export default function OpportunitiesPage() {
   const { user } = useAuth()
-  const [opportunities, setOpportunities] = useState<(Opportunity & { team?: Team })[]>([])
-  const [myTeams, setMyTeams] = useState<Team[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [creating, setCreating] = useState(false)
 
   const [form, setForm] = useState({
@@ -32,51 +30,29 @@ export default function OpportunitiesPage() {
     description: "",
   })
 
-  useEffect(() => {
-    loadData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const { data: opportunities = [], isLoading } = useQuery({
+    queryKey: ["opportunities"],
+    queryFn: () => getOpportunities(),
+  })
 
-  async function loadData() {
-    if (user) {
-      const teams = await findAll("teams", { where: "created_by = $1", params: [user.id] })
-      setMyTeams((teams || []) as Team[])
-    }
+  const { data: myTeams = [] } = useQuery({
+    queryKey: ["my-teams", user?.id],
+    queryFn: () => getUserTeams(user!.id),
+    enabled: !!user,
+  })
 
-    type OppRow = Opportunity & { team: Record<string, unknown> }
-    const data = await query<OppRow>("SELECT o.*, row_to_json(t.*) as team FROM opportunities o JOIN teams t ON t.id = o.team_id WHERE o.is_active = true ORDER BY o.created_at DESC")
-    const enriched = (data || []).map(o => ({ ...o, team: o.team as unknown as Team }))
-    setOpportunities(enriched)
-    setLoading(false)
-  }
-
-  const createOpportunity = async () => {
+  const handleCreate = async () => {
     if (!user || !form.team_id) return
-
     setCreating(true)
-    await insert("opportunities", {
-      team_id: form.team_id,
-      position: form.position,
-      date: form.date,
-      category: form.category,
-      location: form.location,
-      description: form.description,
-      is_active: true,
-    })
+    await createOpportunity(form)
     setCreating(false)
     setForm({ team_id: "", position: "", date: "", category: "", location: "", description: "" })
-    loadData()
+    queryClient.invalidateQueries({ queryKey: ["opportunities"] })
   }
 
-  const applyToOpportunity = async (opportunityId: string) => {
+  const handleApply = async (opportunityId: string) => {
     if (!user) return
-
-    await insert("opportunity_applications", {
-      opportunity_id: opportunityId,
-      player_id: user.id,
-      message: "Me interesa esta oportunidad",
-      status: "pending",
-    })
+    await applyToOpportunity(opportunityId)
   }
 
   return (
@@ -137,7 +113,7 @@ export default function OpportunitiesPage() {
                   <Label>Descripción</Label>
                   <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Detalles de la búsqueda..." />
                 </div>
-                <Button onClick={createOpportunity} disabled={creating} className="w-full">
+                <Button onClick={handleCreate} disabled={creating} className="w-full">
                   {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Publicar
                 </Button>
@@ -147,7 +123,7 @@ export default function OpportunitiesPage() {
         )}
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
@@ -175,7 +151,7 @@ export default function OpportunitiesPage() {
                     </div>
                     {opp.description && <p className="text-sm mt-2">{opp.description}</p>}
                   </div>
-                  <Button size="sm" onClick={() => applyToOpportunity(opp.id)} className="shrink-0">
+                  <Button size="sm" onClick={() => handleApply(opp.id)} className="shrink-0">
                     <Send className="h-4 w-4 mr-2" />Postularme
                   </Button>
                 </div>

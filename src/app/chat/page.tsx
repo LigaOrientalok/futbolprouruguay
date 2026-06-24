@@ -2,8 +2,9 @@
 export const dynamic = "force-dynamic"
 
 import { useState, useEffect, useRef } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { getUserChats, getChatMessages, getUserById } from "@/lib/actions"
 import { useAuth } from "@/lib/auth-client"
-import { query, findById, findAll, insert } from "@/lib/db-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,87 +12,55 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Send, MessageCircle, ArrowLeft } from "lucide-react"
 import { getInitials, formatRelativeTime } from "@/lib/utils"
-import type { Chat, Message, User } from "@/lib/types"
+import type { User } from "@/lib/types"
 import { getPusherClient } from "@/lib/pusher/client"
 
 export default function ChatPage() {
   const { user: authUser, loading: authLoading } = useAuth()
-  const [chats, setChats] = useState<(Chat & { otherUser?: User })[]>([])
-  const [messages, setMessages] = useState<Message[]>([])
+  const queryClient = useQueryClient()
   const [activeChat, setActiveChat] = useState<string | null>(null)
   const [newMessage, setNewMessage] = useState("")
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
   const [showMobileList, setShowMobileList] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  async function loadChats() {
-    if (!authUser) return
-
-    const userChats = await query<Chat>(
-      "SELECT * FROM chats WHERE $1 = ANY(participants) ORDER BY last_message_at DESC NULLS LAST",
-      [authUser.id]
-    )
-
-    if (userChats) {
-      const enrichedChats = await Promise.all(
+  const { data: chats = [], isLoading: chatsLoading } = useQuery({
+    queryKey: ["chats", authUser?.id],
+    queryFn: async () => {
+      if (!authUser) return []
+      const userChats = await getUserChats(authUser.id)
+      return await Promise.all(
         userChats.map(async (chat) => {
           const otherUserId = chat.participants.find((p) => p !== authUser.id)
           if (otherUserId) {
-            const otherUser = await findById<User>("users", otherUserId)
+            const otherUser = await getUserById(otherUserId)
             return { ...chat, otherUser: otherUser || undefined }
           }
           return chat
         })
       )
-      setChats(enrichedChats)
-    }
-    setLoading(false)
-  }
+    },
+    enabled: !!authUser,
+  })
 
-  async function loadMessages() {
-    if (!activeChat) return
-    const data = await findAll<Message>("messages", {
-      where: "chat_id = $1",
-      params: [activeChat],
-      orderBy: "created_at ASC",
-    })
-    setMessages(data || [])
-  }
-
-  useEffect(() => {
-    if (authLoading) return
-    if (authUser) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCurrentUser(authUser as unknown as User)
-      loadChats()
-    } else {
-      setLoading(false)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUser, authLoading])
-
-  useEffect(() => {
-    if (activeChat) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      loadMessages()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChat])
+  const { data: messages = [] } = useQuery({
+    queryKey: ["chat-messages", activeChat],
+    queryFn: () => getChatMessages(activeChat!),
+    enabled: !!activeChat,
+  })
 
   useEffect(() => {
     if (!activeChat) return
     const pc = getPusherClient()
     if (!pc) return
     const channel = pc.subscribe(`chat-${activeChat}`)
-    channel.bind("new-message", (data: Message) => {
-      setMessages((prev) => [...prev, data])
+    channel.bind("new-message", () => {
+      queryClient.invalidateQueries({ queryKey: ["chat-messages", activeChat] })
     })
     return () => {
       channel.unbind_all()
       pc.unsubscribe(`chat-${activeChat}`)
     }
-  }, [activeChat])
+  }, [activeChat, queryClient])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -107,36 +76,10 @@ export default function ChatPage() {
     })
 
     setNewMessage("")
+    queryClient.invalidateQueries({ queryKey: ["chat-messages", activeChat] })
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async function startChat(userId: string) {
-    if (!authUser) return
-
-    const existingChats = await query<Chat>(
-      "SELECT * FROM chats WHERE $1 = ANY(participants) AND $2 = ANY(participants)",
-      [authUser.id, userId]
-    )
-
-    const existingChat = existingChats?.[0]
-
-    if (existingChat) {
-      setActiveChat(existingChat.id)
-      setShowMobileList(false)
-      return existingChat.id
-    }
-
-    const newChat = await insert<Chat>("chats", { participants: [authUser.id, userId] })
-
-    if (newChat) {
-      setActiveChat(newChat.id)
-      setShowMobileList(false)
-      loadChats()
-      return newChat.id
-    }
-  }
-
-  if (authLoading || loading) {
+  if (authLoading || chatsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -171,11 +114,11 @@ export default function ChatPage() {
                     }`}
                   >
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={chat.otherUser?.avatar_url || undefined} />
-                      <AvatarFallback>{chat.otherUser ? getInitials(chat.otherUser.full_name) : "?"}</AvatarFallback>
+                      <AvatarImage src={(chat as { otherUser?: User }).otherUser?.avatar_url || undefined} />
+                      <AvatarFallback>{(chat as { otherUser?: User }).otherUser ? getInitials((chat as { otherUser?: User }).otherUser!.full_name) : "?"}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{chat.otherUser?.full_name || "Usuario"}</p>
+                      <p className="text-sm font-medium truncate">{(chat as { otherUser?: User }).otherUser?.full_name || "Usuario"}</p>
                       {chat.last_message && (
                         <p className="text-xs text-muted-foreground truncate">{chat.last_message}</p>
                       )}
@@ -201,17 +144,17 @@ export default function ChatPage() {
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={activeChatData.otherUser?.avatar_url || undefined} />
-                  <AvatarFallback>{activeChatData.otherUser ? getInitials(activeChatData.otherUser.full_name) : "?"}</AvatarFallback>
+                  <AvatarImage src={(activeChatData as { otherUser?: User }).otherUser?.avatar_url || undefined} />
+                  <AvatarFallback>{(activeChatData as { otherUser?: User }).otherUser ? getInitials((activeChatData as { otherUser?: User }).otherUser!.full_name) : "?"}</AvatarFallback>
                 </Avatar>
-                <p className="font-medium text-sm">{activeChatData.otherUser?.full_name}</p>
+                <p className="font-medium text-sm">{(activeChatData as { otherUser?: User }).otherUser?.full_name}</p>
               </div>
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-3">
                   {messages.map((msg) => (
-                    <div key={msg.id} className={`flex ${msg.sender_id === currentUser?.id ? "justify-end" : "justify-start"}`}>
+                    <div key={msg.id} className={`flex ${msg.sender_id === authUser?.id ? "justify-end" : "justify-start"}`}>
                       <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                        msg.sender_id === currentUser?.id
+                        msg.sender_id === authUser?.id
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted"
                       }`}>

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { getFeedPosts, getPostComments, getUserLikes, createPost, toggleLike, addComment } from "@/lib/actions"
 import { useAuth } from "@/lib/auth-client"
-import { query, findById, findAll, insert, updateById } from "@/lib/db-client"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
@@ -10,129 +11,70 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Heart, MessageCircle, Send, Image as ImageIcon, Loader2 } from "lucide-react"
 import { getInitials, formatRelativeTime } from "@/lib/utils"
-import type { Post, Comment, User } from "@/lib/types"
+import type { Post } from "@/lib/types"
 
 export default function FeedPage() {
-  const { user } = useAuth()
-  const [posts, setPosts] = useState<(Post & { user?: User; comments?: Comment[] })[]>([])
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: authUser } = useAuth()
+  const queryClient = useQueryClient()
   const [newPost, setNewPost] = useState("")
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({})
-  const [loading, setLoading] = useState(true)
-  const [posting, setPosting] = useState(false)
-  const [likedPostIds, setLikedPostIds] = useState<Set<string>>(new Set())
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (user) setCurrentUser(user as unknown as User)
-    else setCurrentUser(null)
-  }, [user])
+  const { data: posts = [], isLoading } = useQuery({
+    queryKey: ["feed"],
+    queryFn: getFeedPosts,
+  })
 
-  async function loadPosts() {
-    type PostRow = Post & { user: Record<string, unknown>; comments?: Comment[] }
-    const data = await query<PostRow>(
-      "SELECT p.*, row_to_json(u.*) as user FROM posts p JOIN users u ON u.id = p.user_id ORDER BY p.created_at DESC LIMIT 20"
-    )
-    const postsData = data || []
+  const postIds = posts.map((p) => p.id)
 
-    if (postsData.length > 0) {
-      const ids = postsData.map((p) => p.id)
-      const placeholders = ids.map((_, i) => `$${i + 1}`).join(",")
-      const allComments = await query<Comment>(
-        `SELECT * FROM comments WHERE post_id IN (${placeholders}) ORDER BY created_at ASC`,
-        ids
-      )
-      const grouped: Record<string, Comment[]> = {}
-      for (const c of (allComments || [])) {
+  const { data: commentsByPost = {} as Record<string, Awaited<ReturnType<typeof getPostComments>>> } = useQuery({
+    queryKey: ["feed-comments", ...postIds],
+    queryFn: async () => {
+      const comments = await getPostComments(postIds)
+      const grouped: Record<string, typeof comments> = {}
+      for (const c of comments) {
         if (!grouped[c.post_id]) grouped[c.post_id] = []
         grouped[c.post_id].push(c)
       }
-      for (const p of postsData) {
-        p.comments = grouped[p.id] || []
-      }
-    }
+      return grouped
+    },
+    enabled: postIds.length > 0,
+  })
 
-    const enriched = postsData.map(p => ({ ...p, user: p.user as unknown as User }))
-    setPosts(enriched)
-    setLoading(false)
-    const current = currentUser
+  const { data: likedPostIds = [] as { post_id: string }[] } = useQuery({
+    queryKey: ["feed-likes", authUser?.id, ...postIds],
+    queryFn: () => getUserLikes(authUser!.id, postIds),
+    enabled: !!authUser && postIds.length > 0,
+  })
 
-    if (current) {
-      const postIds = postsData.map((p) => p.id)
-      if (postIds.length > 0) {
-        const placeholders = postIds.map((_, i) => `$${i + 1}`).join(",")
-        const userLikes = await query<{ post_id: string }>(
-          `SELECT post_id FROM likes WHERE user_id = $${postIds.length + 1} AND post_id IN (${placeholders})`,
-          [...postIds, current.id]
-        )
-        setLikedPostIds(new Set((userLikes || []).map((l) => l.post_id)))
-      }
-    }
-  }
+  const likedSet = new Set(likedPostIds.map((l) => l.post_id))
 
-  async function createPost() {
-    if (!newPost.trim() || !currentUser) return
-    setPosting(true)
-    await insert("posts", {
-      user_id: currentUser.id,
-      content: newPost.trim(),
-      image_urls: [],
-      video_url: null,
-      likes_count: 0,
-      comments_count: 0,
-    })
-    setNewPost("")
-    setPosting(false)
-    loadPosts()
-  }
+  const createPostMutation = useMutation({
+    mutationFn: () => createPost(newPost.trim()),
+    onSuccess: () => {
+      setNewPost("")
+      queryClient.invalidateQueries({ queryKey: ["feed"] })
+    },
+  })
 
-  async function toggleLike(postId: string) {
-    if (!currentUser) return
-    const existingLikes = await findAll<{ id: string }>("likes", {
-      where: "post_id = $1 AND user_id = $2",
-      params: [postId, currentUser.id],
-    })
-    const existingLike = (existingLikes || [])[0]
+  const toggleLikeMutation = useMutation({
+    mutationFn: (postId: string) => toggleLike(postId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["feed"] }),
+  })
 
-    if (existingLike) {
-      await query("DELETE FROM likes WHERE id = $1", [existingLike.id])
-      const post = await findById<Record<string, unknown>>("posts", postId)
-      if (post) {
-        await updateById("posts", postId, { likes_count: ((post.likes_count as number) || 0) - 1 })
-      }
-      setLikedPostIds(prev => { const s = new Set(prev); s.delete(postId); return s })
-    } else {
-      await insert("likes", { post_id: postId, user_id: currentUser.id })
-      const post = await findById<Record<string, unknown>>("posts", postId)
-      if (post) {
-        await updateById("posts", postId, { likes_count: ((post.likes_count as number) || 0) + 1 })
-      }
-      setLikedPostIds(prev => { const s = new Set(prev); s.add(postId); return s })
-    }
-    loadPosts()
-  }
+  const addCommentMutation = useMutation({
+    mutationFn: ({ postId, content }: { postId: string; content: string }) => addComment(postId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feed"] })
+    },
+  })
 
-  async function addComment(postId: string) {
+  const handleAddComment = (postId: string) => {
     const text = commentInputs[postId]?.trim()
-    if (!text || !currentUser) return
-
-    await insert("comments", {
-      post_id: postId,
-      user_id: currentUser.id,
-      content: text,
-    })
-
-    const post = await findById<Record<string, unknown>>("posts", postId)
-    if (post) {
-      await updateById("posts", postId, { comments_count: ((post.comments_count as number) || 0) + 1 })
-    }
-
+    if (!text) return
+    addCommentMutation.mutate({ postId, content: text })
     setCommentInputs({ ...commentInputs, [postId]: "" })
-    loadPosts()
   }
-
-  const hasLiked = (post: Post) => likedPostIds.has(post.id)
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -145,8 +87,8 @@ export default function FeedPage() {
         <CardContent className="p-4">
           <div className="flex gap-3">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={currentUser?.avatar_url || undefined} />
-              <AvatarFallback>{currentUser ? getInitials(currentUser.full_name) : "?"}</AvatarFallback>
+              <AvatarImage src={authUser?.avatar_url || undefined} />
+              <AvatarFallback>{authUser ? getInitials(authUser.full_name) : "?"}</AvatarFallback>
             </Avatar>
             <div className="flex-1 space-y-3">
               <Textarea
@@ -162,8 +104,12 @@ export default function FeedPage() {
                     <ImageIcon className="h-4 w-4" />
                   </Button>
                 </div>
-                <Button size="sm" onClick={createPost} disabled={!newPost.trim() || posting}>
-                  {posting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                <Button
+                  size="sm"
+                  onClick={() => createPostMutation.mutate()}
+                  disabled={!newPost.trim() || createPostMutation.isPending}
+                >
+                  {createPostMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                   Publicar
                 </Button>
               </div>
@@ -172,7 +118,7 @@ export default function FeedPage() {
         </CardContent>
       </Card>
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
@@ -202,8 +148,8 @@ export default function FeedPage() {
               </CardContent>
               <CardFooter className="p-4 pt-0 flex flex-col gap-3">
                 <div className="flex items-center gap-4">
-                  <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors">
-                    <Heart className={`h-4 w-4 ${hasLiked(post) ? "fill-primary text-primary" : ""}`} />
+                  <button onClick={() => toggleLikeMutation.mutate(post.id)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors">
+                    <Heart className={`h-4 w-4 ${likedSet.has(post.id) ? "fill-primary text-primary" : ""}`} />
                     {post.likes_count || 0}
                   </button>
                   <button onClick={() => setExpandedComments({ ...expandedComments, [post.id]: !expandedComments[post.id] })} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors">
@@ -220,14 +166,14 @@ export default function FeedPage() {
                         onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
                         placeholder="Escribí un comentario..."
                         className="flex-1"
-                        onKeyDown={(e) => e.key === "Enter" && addComment(post.id)}
+                        onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
                       />
-                      <Button size="icon" variant="ghost" onClick={() => addComment(post.id)}>
+                      <Button size="icon" variant="ghost" onClick={() => handleAddComment(post.id)}>
                         <Send className="h-4 w-4" />
                       </Button>
                     </div>
                     <div className="space-y-2">
-                      {(post.comments || []).slice(0, 3).map((comment: Comment) => (
+                      {(commentsByPost[post.id] || []).slice(0, 3).map((comment) => (
                         <div key={comment.id} className="flex gap-2">
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="text-[10px]">{getInitials(comment.user_id)}</AvatarFallback>

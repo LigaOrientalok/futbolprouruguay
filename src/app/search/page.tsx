@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useAuth } from "@/lib/auth-client"
-import { query } from "@/lib/db-client"
+import { useState } from "react"
+import { useQuery, keepPreviousData } from "@tanstack/react-query"
+import { searchPlayers } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -15,11 +15,7 @@ import { POSITIONS, CATEGORIES, LEVELS, AVAILABILITIES } from "@/lib/constants"
 import type { User, PlayerProfile } from "@/lib/types"
 
 export default function SearchPage() {
-  const [results, setResults] = useState<(User & { profile?: PlayerProfile })[]>([])
-  const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
-  useAuth()
-
   const [filters, setFilters] = useState({
     query: "",
     position: "",
@@ -29,76 +25,28 @@ export default function SearchPage() {
     city: "",
   })
 
-  useEffect(() => {
-    searchPlayers()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.category, filters.level, filters.availability, filters.position])
-
-  async function searchPlayers() {
-    setLoading(true)
-
-    let sql = `SELECT u.*, row_to_json(pp.*) as profile FROM users u LEFT JOIN player_profiles pp ON pp.user_id = u.id WHERE u.role != 'admin'`
-    const conditions: string[] = []
-    const params: (string | number)[] = []
-    let paramIndex = 1
-
-    if (filters.position) {
-      conditions.push(`(pp.main_position = $${paramIndex} OR pp.secondary_positions @> ARRAY[$${paramIndex}])`)
-      params.push(filters.position)
-      paramIndex++
-    }
-    if (filters.category) {
-      conditions.push(`pp.category = $${paramIndex}`)
-      params.push(filters.category)
-      paramIndex++
-    }
-    if (filters.level) {
-      conditions.push(`pp.level = $${paramIndex}`)
-      params.push(filters.level)
-      paramIndex++
-    }
-    if (filters.availability) {
-      conditions.push(`pp.availability = $${paramIndex}`)
-      params.push(filters.availability)
-      paramIndex++
-    }
-    if (filters.city) {
-      conditions.push(`pp.city ILIKE $${paramIndex}`)
-      params.push(`%${filters.city}%`)
-      paramIndex++
-    }
-
-    if (conditions.length > 0) {
-      sql += ` AND ${conditions.join(" AND ")}`
-    }
-
-    sql += ` ORDER BY u.subscription_tier DESC LIMIT 50`
-
-    const data = await query<Record<string, unknown>>(sql, params)
-    let filtered: Record<string, unknown>[] = Array.isArray(data) ? data : []
-
-    if (filters.query) {
-      const q = filters.query.toLowerCase()
-      filtered = filtered.filter((u) =>
-        (u.full_name as string)?.toLowerCase().includes(q) ||
-        (u.username as string)?.toLowerCase().includes(q) ||
-        ((u.profile as Record<string, string>)?.city ?? "").toLowerCase().includes(q)
-      )
-    }
-
-    const mapped = filtered.map((u) => ({
-      ...u,
-      profile: typeof u.profile === "string" ? JSON.parse(u.profile as string) : u.profile
-    }))
-    setResults(mapped as unknown as (User & { profile?: PlayerProfile })[])
-    setLoading(false)
-  }
+  const { data: results = [], isLoading } = useQuery({
+    queryKey: ["search-players", filters.position, filters.category, filters.level, filters.availability, filters.city],
+    queryFn: () => searchPlayers(filters),
+    placeholderData: keepPreviousData,
+  })
 
   const clearFilters = () => {
     setFilters({ query: "", position: "", category: "", level: "", availability: "", city: "" })
   }
 
   const hasActiveFilters = Object.values(filters).some((v) => v !== "")
+
+  const displayResults = filters.query
+    ? results.filter((u) => {
+        const q = filters.query.toLowerCase()
+        return (
+          u.full_name?.toLowerCase().includes(q) ||
+          u.username?.toLowerCase().includes(q) ||
+          u.profile?.city?.toLowerCase().includes(q)
+        )
+      })
+    : results
 
   return (
     <div className="space-y-6">
@@ -115,7 +63,6 @@ export default function SearchPage() {
             className="pl-9"
             value={filters.query}
             onChange={(e) => setFilters({ ...filters, query: e.target.value })}
-            onKeyDown={(e) => e.key === "Enter" && searchPlayers()}
           />
         </div>
         <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
@@ -170,18 +117,18 @@ export default function SearchPage() {
         </Card>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
-      ) : results.length === 0 ? (
+      ) : displayResults.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>No se encontraron jugadores con esos filtros</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {results.map((user) => {
+          {displayResults.map((user) => {
             const profile = user.profile ?? null
             return (
               <Card key={user.id} className="hover:bg-accent/50 transition-colors">

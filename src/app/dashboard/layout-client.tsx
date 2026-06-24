@@ -2,29 +2,13 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { SidebarNav } from "@/components/layout/sidebar-nav"
 import { useTheme } from "next-themes"
-import { 
-  LayoutDashboard, Users, Search, Calendar, MessageCircle, 
-  Trophy, Sun, Moon, Menu, X, LogOut, Star, 
-  Swords, ShoppingBag, Award
-} from "lucide-react"
+import { Trophy, Sun, Moon, Menu, LogOut } from "lucide-react"
 import { getInitials } from "@/lib/utils"
-
-const sidebarItems = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Inicio" },
-  { href: "/profile", icon: Users, label: "Mi Perfil" },
-  { href: "/teams", icon: Trophy, label: "Equipos" },
-  { href: "/search", icon: Search, label: "Buscar" },
-  { href: "/opportunities", icon: Calendar, label: "Oportunidades" },
-  { href: "/challenges", icon: Swords, label: "Desafíos" },
-  { href: "/chat", icon: MessageCircle, label: "Mensajes" },
-  { href: "/feed", icon: Star, label: "Feed" },
-  { href: "/ranking", icon: Award, label: "Ranking" },
-  { href: "/premium", icon: ShoppingBag, label: "Premium" },
-]
 
 export default function DashboardLayout({
   children,
@@ -33,7 +17,6 @@ export default function DashboardLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user, loading, logout } = useAuth()
-  const pathname = usePathname()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
 
@@ -73,17 +56,17 @@ export default function DashboardLayout({
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <div className="fixed top-0 left-0 bottom-0 w-64 bg-background border-r p-4">
+          <div className="fixed top-0 left-0 bottom-0 w-64 bg-background border-r p-4 animate-in slide-in-from-left">
             <div className="flex items-center justify-between mb-6">
               <Link href="/dashboard" className="flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-primary" />
                 <span className="font-bold">FutbolMatch</span>
               </Link>
-              <button onClick={() => setSidebarOpen(false)} className="p-1">
-                <X className="h-5 w-5" />
+              <button onClick={() => setSidebarOpen(false)} className="p-1 text-muted-foreground hover:text-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
             </div>
-            <SidebarNav items={sidebarItems} pathname={pathname} onItemClick={() => setSidebarOpen(false)} />
+            <SidebarNav onItemClick={() => setSidebarOpen(false)} />
             <div className="mt-6 pt-6 border-t">
               <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent transition-colors">
                 <LogOut className="h-4 w-4" />
@@ -102,7 +85,7 @@ export default function DashboardLayout({
             <span className="font-bold">FutbolMatch</span>
           </div>
           <div className="flex-1 flex flex-col justify-between p-4">
-            <SidebarNav items={sidebarItems} pathname={pathname} />
+            <SidebarNav />
             <div className="pt-4 border-t">
               <div className="flex items-center gap-3 px-3 py-2 mb-2">
                 <Avatar className="h-8 w-8">
@@ -130,38 +113,5 @@ export default function DashboardLayout({
         </div>
       </main>
     </div>
-  )
-}
-
-function SidebarNav({ 
-  items, 
-  pathname, 
-  onItemClick 
-}: { 
-  items: typeof sidebarItems
-  pathname: string
-  onItemClick?: () => void 
-}) {
-  return (
-    <nav className="space-y-1">
-      {items.map((item) => {
-        const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onItemClick}
-            className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
-              isActive
-                ? "bg-primary/10 text-primary font-medium"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            }`}
-          >
-            <item.icon className="h-4 w-4" />
-            {item.label}
-          </Link>
-        )
-      })}
-    </nav>
   )
 }

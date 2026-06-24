@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
-import { findAll } from "@/lib/db-client"
-import { useAuth } from "@/lib/auth-client"
+import { useQuery } from "@tanstack/react-query"
+import { getTeams } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,27 +15,13 @@ import type { Team } from "@/lib/types"
 import { CATEGORIES } from "@/lib/constants"
 
 export default function TeamsPage() {
-  const [teams, setTeams] = useState<Team[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("")
-  useAuth()
 
-  useEffect(() => {
-    ;(async () => {
-      setLoading(true)
-      const opts: Record<string, unknown> = { orderBy: "created_at DESC" }
-      if (categoryFilter) {
-        opts.where = "category = $1"
-        opts.params = [categoryFilter]
-      }
-      const data = await findAll<Team>("teams", opts as Parameters<typeof findAll<Team>>[1])
-      setTeams(data || [])
-      setLoading(false)
-    })()
-  }, [categoryFilter])
-
-
+  const { data: teams = [], isLoading } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => getTeams(),
+  })
 
   const filteredTeams = teams.filter((team) => {
     if (!searchQuery) return true
@@ -45,6 +31,9 @@ export default function TeamsPage() {
       team.city.toLowerCase().includes(q) ||
       team.neighborhood?.toLowerCase().includes(q)
     )
+  }).filter((team) => {
+    if (!categoryFilter) return true
+    return team.category === categoryFilter
   })
 
   return (
@@ -83,7 +72,7 @@ export default function TeamsPage() {
         </Select>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>

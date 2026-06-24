@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { getChallenges, getUserTeams, createChallenge, acceptChallenge } from "@/lib/actions"
 import { useAuth } from "@/lib/auth-client"
-import { query, findAll, insert, updateById } from "@/lib/db-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -15,13 +16,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Clock, MapPin, Plus, Loader2, Swords, Check } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { CATEGORIES } from "@/lib/constants"
-import type { Challenge, Team } from "@/lib/types"
 
 export default function ChallengesPage() {
   const { user } = useAuth()
-  const [challenges, setChallenges] = useState<(Challenge & { team?: Team })[]>([])
-  const [myTeams, setMyTeams] = useState<Team[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [creating, setCreating] = useState(false)
 
   const [form, setForm] = useState({
@@ -34,54 +32,32 @@ export default function ChallengesPage() {
     description: "",
   })
 
-  useEffect(() => {
-    loadData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const { data: challenges = [], isLoading } = useQuery({
+    queryKey: ["challenges"],
+    queryFn: () => getChallenges(),
+  })
 
-  async function loadData() {
-    if (user) {
-      const teams = await findAll("teams", { where: "created_by = $1", params: [user.id] })
-      setMyTeams((teams || []) as Team[])
-    }
+  const { data: myTeams = [] } = useQuery({
+    queryKey: ["my-teams", user?.id],
+    queryFn: () => getUserTeams(user!.id),
+    enabled: !!user,
+  })
 
-    const data = await query("SELECT c.*, row_to_json(t.*) as team FROM challenges c JOIN teams t ON t.id = c.team_id ORDER BY c.created_at DESC")
-    type ChallengeRow = Challenge & { team: Record<string, unknown> }
-    const rows = (data || []) as unknown as ChallengeRow[]
-    setChallenges(rows.map(r => ({ ...r, team: r.team as unknown as Team })))
-    setLoading(false)
-  }
-
-  const createChallenge = async () => {
+  const handleCreate = async () => {
     if (!user || !form.team_id) return
-
     setCreating(true)
-    await insert("challenges", {
-      team_id: form.team_id,
-      date: form.date,
-      time: form.time,
-      category: form.category,
-      zone: form.zone,
-      location_type: form.location_type,
-      description: form.description,
-      status: "open",
-    })
+    await createChallenge(form)
     setCreating(false)
     setForm({ team_id: "", date: "", time: "", category: "", zone: "", location_type: "home", description: "" })
-    loadData()
+    queryClient.invalidateQueries({ queryKey: ["challenges"] })
   }
 
-  const acceptChallenge = async (challengeId: string) => {
+  const handleAccept = async (challengeId: string) => {
     if (!user) return
-
     const myTeam = myTeams[0]
     if (!myTeam) return
-
-    await updateById("challenges", challengeId, {
-      opponent_team_id: myTeam.id,
-      status: "accepted",
-    })
-    loadData()
+    await acceptChallenge(challengeId, myTeam.id)
+    queryClient.invalidateQueries({ queryKey: ["challenges"] })
   }
 
   return (
@@ -149,7 +125,7 @@ export default function ChallengesPage() {
                   <Label>Descripción</Label>
                   <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Detalles del desafío..." />
                 </div>
-                <Button onClick={createChallenge} disabled={creating} className="w-full">
+                <Button onClick={handleCreate} disabled={creating} className="w-full">
                   {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Publicar desafío
                 </Button>
@@ -159,7 +135,7 @@ export default function ChallengesPage() {
         )}
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
@@ -196,7 +172,7 @@ export default function ChallengesPage() {
                         {challenge.description && <p className="text-xs mt-2 text-muted-foreground">{challenge.description}</p>}
                       </div>
                       {myTeams.length > 0 && (
-                        <Button size="sm" onClick={() => acceptChallenge(challenge.id)}>
+                        <Button size="sm" onClick={() => handleAccept(challenge.id)}>
                           <Check className="h-4 w-4 mr-2" />Aceptar desafío
                         </Button>
                       )}

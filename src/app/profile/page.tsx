@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { getMe, getPlayerProfile, getUserBadges, upsertPlayerProfile } from "@/lib/actions"
 import { useAuth } from "@/lib/auth-client"
-import { query, findById, insert, updateById } from "@/lib/db-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,17 +21,11 @@ import { uploadFiles } from "@/lib/uploadthing"
 
 export default function ProfilePage() {
   const { user: authUser, refresh: refreshAuth } = useAuth()
-  const [user, setUser] = useState<UserType | null>(null)
-  const [profile, setProfile] = useState<PlayerProfile | null>(null)
-  const [badges, setBadges] = useState<BadgeType[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const queryClient = useQueryClient()
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [activeTab, setActiveTab] = useState("view")
   const router = useRouter()
 
-  // Form state
   const [form, setForm] = useState({
     age: 0,
     main_position: "",
@@ -51,117 +46,63 @@ export default function ProfilePage() {
     video_urls: [] as string[],
   })
 
-  const loadProfile = useCallback(async () => {
-    if (!authUser) { router.push("/auth/login"); return }
-    try {
-      const [userData, profileResult, userBadges] = await Promise.all([
-        findById<UserType>("users", authUser.id),
-        query<PlayerProfile>("SELECT * FROM player_profiles WHERE user_id = $1 LIMIT 1", [authUser.id]),
-        query<BadgeType>("SELECT * FROM badges WHERE user_id = $1", [authUser.id]),
-      ])
-      setUser(userData)
-      setBadges(userBadges || [])
+  const { data: user } = useQuery({
+    queryKey: ["me"],
+    queryFn: getMe,
+    enabled: !!authUser,
+  })
 
-      const profileData = profileResult?.[0] || null
-      if (profileData) {
-        setProfile(profileData)
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ["player-profile", authUser?.id],
+    queryFn: async () => {
+      if (!authUser) return null
+      const data = await getPlayerProfile(authUser.id)
+      if (data) {
         setForm({
-          age: profileData.age || 0,
-          main_position: profileData.main_position || "",
-          secondary_positions: profileData.secondary_positions || [],
-          city: profileData.city || "",
-          neighborhood: profileData.neighborhood || "",
-          preferred_leg: profileData.preferred_leg || "",
-          height_cm: profileData.height_cm || 0,
-          weight_kg: profileData.weight_kg || 0,
-          availability: profileData.availability || "",
-          category: profileData.category || "",
-          level: profileData.level || "",
-          description: profileData.description || "",
-          social_instagram: profileData.social_instagram || "",
-          social_twitter: profileData.social_twitter || "",
-          social_facebook: profileData.social_facebook || "",
-          social_whatsapp: profileData.social_whatsapp || "",
-          video_urls: profileData.video_urls || [],
+          age: data.age || 0,
+          main_position: data.main_position || "",
+          secondary_positions: data.secondary_positions || [],
+          city: data.city || "",
+          neighborhood: data.neighborhood || "",
+          preferred_leg: data.preferred_leg || "",
+          height_cm: data.height_cm || 0,
+          weight_kg: data.weight_kg || 0,
+          availability: data.availability || "",
+          category: data.category || "",
+          level: data.level || "",
+          description: data.description || "",
+          social_instagram: data.social_instagram || "",
+          social_twitter: data.social_twitter || "",
+          social_facebook: data.social_facebook || "",
+          social_whatsapp: data.social_whatsapp || "",
+          video_urls: data.video_urls || [],
         })
       }
-    } catch (error) {
-      console.error("Error loading profile:", error)
-    }
-    setLoading(false)
-  }, [authUser, router])
+      return data
+    },
+    enabled: !!authUser,
+  })
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (authUser) loadProfile()
-    else router.push("/auth/login")
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadProfile])
+  const { data: badges = [] } = useQuery({
+    queryKey: ["user-badges", authUser?.id],
+    queryFn: () => getUserBadges(authUser!.id),
+    enabled: !!authUser,
+  })
 
-  const handleSave = async () => {
-    if (!authUser) return
-    setSaving(true)
-    setSaveMessage(null)
+  const saveMutation = useMutation({
+    mutationFn: () => upsertPlayerProfile(authUser!.id, form as unknown as Partial<PlayerProfile>),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["player-profile", authUser?.id] })
+      setActiveTab("view")
+    },
+  })
 
-    const profileData = {
-      user_id: authUser.id,
-      age: form.age,
-      main_position: form.main_position,
-      secondary_positions: form.secondary_positions,
-      city: form.city,
-      neighborhood: form.neighborhood,
-      preferred_leg: form.preferred_leg,
-      height_cm: form.height_cm,
-      weight_kg: form.weight_kg,
-      availability: form.availability,
-      category: form.category,
-      level: form.level,
-      description: form.description,
-      social_instagram: form.social_instagram || null,
-      social_twitter: form.social_twitter || null,
-      social_facebook: form.social_facebook || null,
-      social_whatsapp: form.social_whatsapp || null,
-      video_urls: form.video_urls,
-    }
-
-    try {
-      if (profile) {
-        await updateById("player_profiles", profile.id, profileData)
-      } else {
-        await insert("player_profiles", profileData)
-      }
-
-      setSaveMessage({ type: "success", text: "Perfil guardado correctamente" })
-      const savedProfile = profile
-        ? { ...profile, ...profileData }
-        : { id: "tmp", ...profileData }
-
-      setProfile(savedProfile as PlayerProfile)
-      setTimeout(() => setActiveTab("view"), 600)
-    } catch (error) {
-      console.error("Error saving profile:", error)
-      setSaveMessage({ type: "error", text: "Error al guardar. Intentá de nuevo." })
-    }
-    setSaving(false)
+  if (!authUser) {
+    router.push("/auth/login")
+    return null
   }
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setAvatarUploading(true)
-    try {
-      const res = await uploadFiles("avatarUploader", { files: [file] })
-      if (res?.[0]) {
-        setUser(prev => prev ? { ...prev, avatar_url: res[0].ufsUrl } : prev)
-        await refreshAuth()
-      }
-    } catch (error) {
-      console.error("Error al subir avatar", error)
-    }
-    setAvatarUploading(false)
-  }
-
-  if (loading) {
+  if (profileLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -175,6 +116,22 @@ export default function ProfilePage() {
     captain: <Trophy className="h-4 w-4 text-primary" />,
     premium: <Shield className="h-4 w-4 text-purple-500" />,
     veteran: <Medal className="h-4 w-4 text-orange-500" />,
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarUploading(true)
+    try {
+      const res = await uploadFiles("avatarUploader", { files: [file] })
+      if (res?.[0]) {
+        await refreshAuth()
+        queryClient.invalidateQueries({ queryKey: ["me"] })
+      }
+    } catch (error) {
+      console.error("Error al subir avatar", error)
+    }
+    setAvatarUploading(false)
   }
 
   return (
@@ -305,14 +262,20 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                {saving ? "Guardando..." : "Guardar cambios"}
+              <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                {saveMutation.isPending ? "Guardando..." : "Guardar cambios"}
               </Button>
-              {saveMessage && (
-                <span className={`text-sm flex items-center gap-1 ${saveMessage.type === "success" ? "text-green-500" : "text-destructive"}`}>
-                  {saveMessage.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                  {saveMessage.text}
+              {saveMutation.isSuccess && (
+                <span className="text-sm flex items-center gap-1 text-green-500">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Perfil guardado correctamente
+                </span>
+              )}
+              {saveMutation.isError && (
+                <span className="text-sm flex items-center gap-1 text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  Error al guardar. Intentá de nuevo.
                 </span>
               )}
             </div>

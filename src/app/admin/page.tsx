@@ -1,9 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-client"
-import { query, count, updateById } from "@/lib/db-client"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { getAdminStats, getUsers, toggleUserSuspend, toggleUserRole } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -11,63 +9,31 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Users, Trophy, Calendar, Star, Shield, Ban, CheckCircle } from "lucide-react"
 import { getInitials } from "@/lib/utils"
-import type { User } from "@/lib/types"
 
 export default function AdminPage() {
-  const { user, loading: authLoading } = useAuth()
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalTeams: 0,
-    totalPosts: 0,
-    premiumUsers: 0,
+  const queryClient = useQueryClient()
+
+  const { data: stats } = useQuery({
+    queryKey: ["admin-stats"],
+    queryFn: getAdminStats,
   })
-  const router = useRouter()
 
-  useEffect(() => {
-    if (authLoading) return
-    if (!user) { router.push("/auth/login"); return }
-    loadData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading, router])
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: () => getUsers(),
+  })
 
-  async function loadData() {
-    if (user!.role !== "admin") {
-      router.push("/dashboard")
-      return
-    }
+  const toggleStatusMutation = useMutation({
+    mutationFn: (userId: string) => toggleUserSuspend(userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+  })
 
-    const [totalUsers, totalTeams, totalPosts, premiumUsers] = await Promise.all([
-      count("users"),
-      count("teams"),
-      count("posts"),
-      count("users", "subscription_tier = $1", ["premium"]),
-    ])
+  const toggleRoleMutation = useMutation({
+    mutationFn: (userId: string) => toggleUserRole(userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+  })
 
-    setStats({
-      totalUsers: totalUsers || 0,
-      totalTeams: totalTeams || 0,
-      totalPosts: totalPosts || 0,
-      premiumUsers: premiumUsers || 0,
-    })
-
-    const allUsers = await query("SELECT * FROM users ORDER BY created_at DESC LIMIT 50") as User[]
-    setUsers(allUsers || [])
-    setLoading(false)
-  }
-
-  const toggleUserStatus = async (userId: string, suspend: boolean) => {
-    await updateById("users", userId, { is_suspended: suspend })
-    loadData()
-  }
-
-  const toggleUserRole = async (userId: string, role: string) => {
-    await updateById("users", userId, { role })
-    loadData()
-  }
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -84,10 +50,10 @@ export default function AdminPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: Users, label: "Usuarios", value: stats.totalUsers, color: "text-blue-500" },
-          { icon: Trophy, label: "Equipos", value: stats.totalTeams, color: "text-green-500" },
-          { icon: Calendar, label: "Publicaciones", value: stats.totalPosts, color: "text-orange-500" },
-          { icon: Star, label: "Premium", value: stats.premiumUsers, color: "text-purple-500" },
+          { icon: Users, label: "Usuarios", value: stats?.totalUsers ?? 0, color: "text-blue-500" },
+          { icon: Trophy, label: "Equipos", value: stats?.totalTeams ?? 0, color: "text-green-500" },
+          { icon: Calendar, label: "Publicaciones", value: stats?.totalPosts ?? 0, color: "text-orange-500" },
+          { icon: Star, label: "Premium", value: stats?.premiumUsers ?? 0, color: "text-purple-500" },
         ].map(({ icon: Icon, label, value, color }) => (
           <Card key={label}>
             <CardContent className="p-4 sm:p-6">
@@ -134,14 +100,14 @@ export default function AdminPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleUserStatus(u.id, !u.is_suspended)}
+                        onClick={() => toggleStatusMutation.mutate(u.id)}
                       >
                         {u.is_suspended ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Ban className="h-4 w-4 text-destructive" />}
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleUserRole(u.id, u.role === "admin" ? "player" : "admin")}
+                        onClick={() => toggleRoleMutation.mutate(u.id)}
                       >
                         <Shield className={`h-4 w-4 ${u.role === "admin" ? "text-primary" : "text-muted-foreground"}`} />
                       </Button>
@@ -177,7 +143,7 @@ export default function AdminPage() {
                       <Avatar><AvatarFallback>{getInitials(u.full_name)}</AvatarFallback></Avatar>
                       <p className="text-sm font-medium">{u.full_name}</p>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => toggleUserStatus(u.id, false)}>
+                    <Button size="sm" variant="outline" onClick={() => toggleStatusMutation.mutate(u.id)}>
                       Reactivar
                     </Button>
                   </div>

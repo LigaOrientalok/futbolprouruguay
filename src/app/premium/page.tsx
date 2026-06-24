@@ -1,8 +1,7 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-client"
+import { useQuery } from "@tanstack/react-query"
+import { getMe } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,20 +9,16 @@ import { Check, Crown, Zap } from "lucide-react"
 import Link from "next/link"
 
 export default function PremiumPage() {
-  const { user, loading } = useAuth()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/auth/login")
-    }
-  }, [user, loading, router])
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["me"],
+    queryFn: getMe,
+  })
 
   const handlePremium = async () => {
     window.open("https://buy.stripe.com/test_placeholder", "_blank")
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -31,7 +26,14 @@ export default function PremiumPage() {
     )
   }
 
-  if (!user) return null
+  if (!user) {
+    return (
+      <div className="text-center py-16">
+        <h1 className="text-2xl font-bold mb-4">Iniciá sesión para ver Premium</h1>
+        <Button asChild><Link href="/auth/login">Iniciar sesión</Link></Button>
+      </div>
+    )
+  }
 
   if (user?.subscription_tier === "premium") {
     return (

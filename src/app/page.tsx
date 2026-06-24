@@ -1,15 +1,10 @@
-"use client"
-
 import Link from "next/link"
-import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
-import { Sun, Moon, Menu, X, Search, Users, Calendar, MessageCircle, Trophy, Shield, Star } from "lucide-react"
-import { useState } from "react"
+import { Trophy, Search, Users, Calendar, MessageCircle, Shield, Star } from "lucide-react"
+import { ThemeToggle } from "@/components/landing/theme-toggle"
+import { MobileNav } from "@/components/landing/mobile-nav"
 
 export default function LandingPage() {
-  const { theme, setTheme } = useTheme()
-  const [menuOpen, setMenuOpen] = useState(false)
-
   return (
     <div className="min-h-screen">
       {/* Navbar */}
@@ -28,32 +23,14 @@ export default function LandingPage() {
             <Button asChild>
               <Link href="/auth/register">Registrarse</Link>
             </Button>
-            <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="p-2 rounded-md hover:bg-accent">
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
+            <ThemeToggle />
           </nav>
 
           <div className="flex items-center gap-2 md:hidden">
-            <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="p-2 rounded-md hover:bg-accent">
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
-            <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 rounded-md hover:bg-accent">
-              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+            <ThemeToggle />
+            <MobileNav />
           </div>
         </div>
-
-        {menuOpen && (
-          <div className="md:hidden border-t bg-background p-4">
-            <nav className="flex flex-col gap-3">
-              <Link href="#features" onClick={() => setMenuOpen(false)} className="text-sm text-muted-foreground hover:text-foreground">Funcionalidades</Link>
-              <Link href="#how-it-works" onClick={() => setMenuOpen(false)} className="text-sm text-muted-foreground hover:text-foreground">Cómo funciona</Link>
-              <Link href="#premium" onClick={() => setMenuOpen(false)} className="text-sm text-muted-foreground hover:text-foreground">Premium</Link>
-              <Link href="/auth/login" onClick={() => setMenuOpen(false)} className="text-sm text-muted-foreground hover:text-foreground">Iniciar sesión</Link>
-              <Button asChild className="w-full"><Link href="/auth/register">Registrarse</Link></Button>
-            </nav>
-          </div>
-        )}
       </header>
 
       {/* Hero */}

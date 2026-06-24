@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { insert } from "@/lib/db-client"
+import { createTeam } from "@/lib/actions"
 import { useAuth } from "@/lib/auth-client"
 import { uploadFiles } from "@/lib/uploadthing"
 import { Button } from "@/components/ui/button"
@@ -59,17 +59,8 @@ export default function NewTeamPage() {
     }
 
     try {
-      await insert("teams", {
-        name,
-        slug: slugify(name),
-        badge_url: badgeUrl,
-        city,
-        neighborhood,
-        category,
-        description,
-        player_count: 1,
-        created_by: user.id,
-        is_active: true,
+      await createTeam({
+        name, slug: slugify(name), city, neighborhood, category, description, badge_url: badgeUrl,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al crear el equipo")
