@@ -3,7 +3,7 @@ import { query, findById, findAll, insert, updateById, remove, count, queryRaw }
 import { getCurrentUser } from "@/lib/auth-server"
 
 const ALLOWED_TABLES = [
-  "users", "teams", "team_needs", "team_applications",
+  "users", "teams", "team_needs", "team_applications", "team_members", "player_applications",
   "posts", "likes", "comments",
   "chats", "messages",
   "opportunities", "opportunity_applications",
