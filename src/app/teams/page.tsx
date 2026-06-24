@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Plus, Search, MapPin, Users, Home } from "lucide-react"
 import type { Team } from "@/lib/types"
 import { CATEGORIES } from "@/lib/constants"
@@ -100,9 +101,14 @@ export default function TeamsPage() {
               <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
                 <CardContent className="p-5">
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg shrink-0">
-                      {team.name[0]}
-                    </div>
+                    <Avatar className="w-12 h-12 shrink-0">
+                      {team.badge_url ? (
+                        <AvatarImage src={team.badge_url} alt={team.name} />
+                      ) : null}
+                      <AvatarFallback className="text-primary font-bold text-lg">
+                        {team.name[0]}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0">
                       <h3 className="font-semibold truncate">{team.name}</h3>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">

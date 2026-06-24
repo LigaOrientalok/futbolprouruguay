@@ -7,7 +7,7 @@ import { findById, findAll, insert, query } from "@/lib/db-client"
 import { useAuth } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
@@ -111,9 +111,14 @@ export default function TeamDetailPage() {
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-2xl">
-              {team.name[0]}
-            </div>
+            <Avatar className="w-16 h-16">
+              {team.badge_url ? (
+                <AvatarImage src={team.badge_url} alt={team.name} />
+              ) : null}
+              <AvatarFallback className="text-primary font-bold text-2xl">
+                {team.name[0]}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1">
               <h1 className="text-2xl font-bold">{team.name}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">

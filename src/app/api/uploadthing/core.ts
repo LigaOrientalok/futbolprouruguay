@@ -17,6 +17,18 @@ export const ourFileRouter = {
       await query("UPDATE users SET avatar_url = $1 WHERE id = $2", [file.ufsUrl, metadata.userId])
     }),
 
+  teamBadge: f({
+    image: { maxFileSize: "4MB", maxFileCount: 1 },
+  })
+    .middleware(async () => {
+      const session = await getSession()
+      if (!session) throw new Error("No autorizado")
+      return { userId: session.userId }
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { url: file.ufsUrl }
+    }),
+
   postImage: f({
     image: { maxFileSize: "4MB", maxFileCount: 4 },
   })

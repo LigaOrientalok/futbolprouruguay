@@ -4,13 +4,15 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { insert } from "@/lib/db-client"
 import { useAuth } from "@/lib/auth-client"
+import { uploadFiles } from "@/lib/uploadthing"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, ArrowLeft } from "lucide-react"
+import { Loader2, ArrowLeft, Upload } from "lucide-react"
 import Link from "next/link"
 import { CATEGORIES } from "@/lib/constants"
 import { slugify } from "@/lib/utils"
@@ -21,10 +23,22 @@ export default function NewTeamPage() {
   const [neighborhood, setNeighborhood] = useState("")
   const [category, setCategory] = useState("")
   const [description, setDescription] = useState("")
+  const [badgeFile, setBadgeFile] = useState<File | null>(null)
+  const [badgePreview, setBadgePreview] = useState<string | null>(null)
+  const [badgeUploading, setBadgeUploading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const { user } = useAuth()
+
+  const handleBadgeSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBadgeFile(file)
+    const reader = new FileReader()
+    reader.onload = () => setBadgePreview(reader.result as string)
+    reader.readAsDataURL(file)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,10 +47,26 @@ export default function NewTeamPage() {
 
     if (!user) return
 
+    let badgeUrl: string | null = null
+    if (badgeFile) {
+      setBadgeUploading(true)
+      try {
+        const res = await uploadFiles("teamBadge", { files: [badgeFile] })
+        badgeUrl = res?.[0]?.url ?? null
+      } catch {
+        setError("Error al subir la imagen")
+        setLoading(false)
+        setBadgeUploading(false)
+        return
+      }
+      setBadgeUploading(false)
+    }
+
     try {
       await insert("teams", {
         name,
         slug: slugify(name),
+        badge_url: badgeUrl,
         city,
         neighborhood,
         category,
@@ -75,6 +105,33 @@ export default function NewTeamPage() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</div>}
+
+            <div className="space-y-2">
+              <Label>Escudo del equipo</Label>
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16">
+                  {badgePreview ? (
+                    <AvatarImage src={badgePreview} />
+                  ) : (
+                    <AvatarFallback className="text-lg">?</AvatarFallback>
+                  )}
+                </Avatar>
+                <Label htmlFor="badge" className="cursor-pointer">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <Upload className="h-4 w-4" />
+                    {badgeFile ? "Cambiar imagen" : "Subir escudo"}
+                  </div>
+                  <input
+                    id="badge"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleBadgeSelect}
+                  />
+                </Label>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Nombre del equipo *</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Los Gladiadores" required />
