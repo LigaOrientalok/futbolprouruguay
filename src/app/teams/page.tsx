@@ -55,7 +55,7 @@ export default function TeamsPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/"><Home className="h-4 w-4 mr-2" />Inicio</Link>
+            <Link href="/dashboard"><Home className="h-4 w-4 mr-2" />Inicio</Link>
           </Button>
           <Button asChild>
             <Link href="/teams/new"><Plus className="h-4 w-4 mr-2" />Crear equipo</Link>
