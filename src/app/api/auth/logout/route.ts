@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
-import { clearSessionCookie } from "@/lib/auth-server"
+import { destroySession } from "@/lib/auth-server"
 
 export async function POST() {
-  const response = NextResponse.json({ success: true })
-  clearSessionCookie(response)
-  return response
+  await destroySession()
+  return NextResponse.json({ success: true })
 }

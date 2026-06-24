@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { query } from "@/lib/db"
-import { createSessionToken, setSessionCookie, verifyPassword } from "@/lib/auth-server"
+import { createSession, verifyPassword } from "@/lib/auth-server"
 
 interface UserRow {
   id: string
@@ -42,8 +42,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Cuenta suspendida" }, { status: 403 })
     }
 
-    const token = await createSessionToken(user.id, user.role)
-    const response = NextResponse.json({
+    await createSession(user.id, user.role)
+    return NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
@@ -55,8 +55,6 @@ export async function POST(req: Request) {
         is_suspended: user.is_suspended,
       },
     })
-    setSessionCookie(response, token)
-    return response
   } catch (error) {
     console.error("Login error:", error)
     return NextResponse.json({ error: "Error del servidor" }, { status: 500 })
