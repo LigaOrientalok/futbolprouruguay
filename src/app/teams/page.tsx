@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Search, MapPin, Users } from "lucide-react"
+import { Plus, Search, MapPin, Users, Home } from "lucide-react"
 import type { Team } from "@/lib/types"
 import { CATEGORIES } from "@/lib/constants"
 
@@ -53,9 +53,14 @@ export default function TeamsPage() {
           <h1 className="text-2xl font-bold">Equipos</h1>
           <p className="text-muted-foreground">Encontrá equipos en tu zona</p>
         </div>
-        <Button asChild>
-          <Link href="/teams/new"><Plus className="h-4 w-4 mr-2" />Crear equipo</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/"><Home className="h-4 w-4 mr-2" />Inicio</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/teams/new"><Plus className="h-4 w-4 mr-2" />Crear equipo</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
