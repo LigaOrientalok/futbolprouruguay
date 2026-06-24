@@ -152,7 +152,7 @@ export default function ProfilePage() {
     try {
       const res = await uploadFiles("avatarUploader", { files: [file] })
       if (res?.[0]) {
-        setUser(prev => prev ? { ...prev, avatar_url: res[0].url } : prev)
+        setUser(prev => prev ? { ...prev, avatar_url: res[0].ufsUrl } : prev)
         await refreshAuth()
       }
     } catch (error) {

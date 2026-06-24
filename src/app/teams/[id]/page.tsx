@@ -41,7 +41,7 @@ export default function TeamDetailPage() {
     setBadgeUploading(true)
     try {
       const res = await uploadFiles("teamBadge", { files: [file] })
-      const url = res?.[0]?.url
+      const url = res?.[0]?.ufsUrl
       if (url) {
         await updateById("teams", team.id, { badge_url: url })
         setTeam({ ...team, badge_url: url })

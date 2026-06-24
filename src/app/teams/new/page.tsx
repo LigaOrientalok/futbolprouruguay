@@ -50,7 +50,7 @@ export default function NewTeamPage() {
     if (badgeFile) {
       try {
         const res = await uploadFiles("teamBadge", { files: [badgeFile] })
-        badgeUrl = res?.[0]?.url ?? null
+        badgeUrl = res?.[0]?.ufsUrl ?? null
       } catch {
         setError("Error al subir la imagen")
         setLoading(false)
