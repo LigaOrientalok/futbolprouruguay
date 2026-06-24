@@ -14,7 +14,7 @@ export const ourFileRouter = {
     })
     .onUploadComplete(async ({ metadata, file }) => {
       const { query } = await import("@/lib/db")
-      await query("UPDATE users SET avatar_url = $1 WHERE id = $2", [file.url, metadata.userId])
+      await query("UPDATE users SET avatar_url = $1 WHERE id = $2", [file.ufsUrl, metadata.userId])
     }),
 
   postImage: f({
@@ -26,7 +26,7 @@ export const ourFileRouter = {
       return { userId: session.userId }
     })
     .onUploadComplete(async ({ file }) => {
-      return { url: file.url }
+      return { url: file.ufsUrl }
     }),
 } satisfies FileRouter
 
