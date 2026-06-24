@@ -413,20 +413,16 @@ export async function searchPlayers(filters: {
   if (filters.level) { conditions.push(`pp.level = $${i}`); params.push(filters.level); i++ }
   if (filters.availability) { conditions.push(`pp.availability = $${i}`); params.push(filters.availability); i++ }
   if (filters.city) { conditions.push(`pp.city ILIKE $${i}`); params.push(`%${filters.city}%`); i++ }
+  if (filters.query) {
+    const q = `%${filters.query.toLowerCase()}%`
+    conditions.push(`(LOWER(u.full_name) ILIKE $${i} OR LOWER(u.username) ILIKE $${i} OR LOWER(pp.city) ILIKE $${i})`)
+    params.push(q); i++
+  }
 
   if (conditions.length > 0) sql += ` AND ${conditions.join(" AND ")}`
   sql += ` ORDER BY u.subscription_tier DESC LIMIT 50`
 
-  let results = await query<User & { profile: string | Record<string, unknown> }>(sql, params)
-
-  if (filters.query) {
-    const q = filters.query.toLowerCase()
-    results = results.filter(u =>
-      u.full_name?.toLowerCase().includes(q) ||
-      u.username?.toLowerCase().includes(q) ||
-      (typeof u.profile === "object" && u.profile !== null && (u.profile as Record<string, string>)?.city?.toLowerCase().includes(q))
-    )
-  }
+  const results = await query<User & { profile: string | Record<string, unknown> }>(sql, params)
 
   return results.map(u => ({
     ...u,

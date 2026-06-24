@@ -26,7 +26,7 @@ export default function SearchPage() {
   })
 
   const { data: results = [], isLoading } = useQuery({
-    queryKey: ["search-players", filters.position, filters.category, filters.level, filters.availability, filters.city],
+    queryKey: ["search-players", filters.position, filters.category, filters.level, filters.availability, filters.city, filters.query],
     queryFn: () => searchPlayers(filters),
     placeholderData: keepPreviousData,
   })
@@ -36,17 +36,6 @@ export default function SearchPage() {
   }
 
   const hasActiveFilters = Object.values(filters).some((v) => v !== "")
-
-  const displayResults = filters.query
-    ? results.filter((u) => {
-        const q = filters.query.toLowerCase()
-        return (
-          u.full_name?.toLowerCase().includes(q) ||
-          u.username?.toLowerCase().includes(q) ||
-          u.profile?.city?.toLowerCase().includes(q)
-        )
-      })
-    : results
 
   return (
     <div className="space-y-6">
@@ -121,14 +110,14 @@ export default function SearchPage() {
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
-      ) : displayResults.length === 0 ? (
+      ) : results.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>No se encontraron jugadores con esos filtros</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {displayResults.map((user) => {
+          {results.map((user) => {
             const profile = user.profile ?? null
             return (
               <Card key={user.id} className="hover:bg-accent/50 transition-colors">
