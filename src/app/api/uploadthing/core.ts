@@ -25,7 +25,7 @@ export const ourFileRouter = {
       if (!session) throw new Error("No autorizado")
       return { userId: session.userId }
     })
-    .onUploadComplete(async ({ metadata, file }) => {
+    .onUploadComplete(async ({ file }) => {
       return { url: file.ufsUrl }
     }),
 

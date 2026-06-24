@@ -25,7 +25,6 @@ export default function NewTeamPage() {
   const [description, setDescription] = useState("")
   const [badgeFile, setBadgeFile] = useState<File | null>(null)
   const [badgePreview, setBadgePreview] = useState<string | null>(null)
-  const [badgeUploading, setBadgeUploading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -49,17 +48,14 @@ export default function NewTeamPage() {
 
     let badgeUrl: string | null = null
     if (badgeFile) {
-      setBadgeUploading(true)
       try {
         const res = await uploadFiles("teamBadge", { files: [badgeFile] })
         badgeUrl = res?.[0]?.url ?? null
       } catch {
         setError("Error al subir la imagen")
         setLoading(false)
-        setBadgeUploading(false)
         return
       }
-      setBadgeUploading(false)
     }
 
     try {
