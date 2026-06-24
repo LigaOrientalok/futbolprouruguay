@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MapPin, Users, ArrowLeft, Send, UserPlus } from "lucide-react"
+import { MapPin, Users, ArrowLeft, Send, UserPlus, Home } from "lucide-react"
 import { getInitials, formatDate } from "@/lib/utils"
 import { POSITIONS } from "@/lib/constants"
 import type { Team, TeamMember, TeamNeed, User } from "@/lib/types"
@@ -99,9 +99,14 @@ export default function TeamDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" asChild>
-        <Link href="/teams"><ArrowLeft className="h-4 w-4 mr-2" />Volver a equipos</Link>
-      </Button>
+      <div className="flex gap-2">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/"><Home className="h-4 w-4 mr-2" />Inicio</Link>
+        </Button>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/teams"><ArrowLeft className="h-4 w-4 mr-2" />Volver a equipos</Link>
+        </Button>
+      </div>
 
       <Card>
         <CardContent className="p-6">
