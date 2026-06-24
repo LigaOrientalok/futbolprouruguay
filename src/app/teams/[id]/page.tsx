@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { findById, findAll, insert, query } from "@/lib/db-client"
+import { findById, findAll, insert, updateById, query } from "@/lib/db-client"
 import { useAuth } from "@/lib/auth-client"
+import { uploadFiles } from "@/lib/uploadthing"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -14,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MapPin, Users, ArrowLeft, Send, UserPlus, Home } from "lucide-react"
+import { MapPin, Users, ArrowLeft, Send, UserPlus, Home, Upload } from "lucide-react"
 import { getInitials, formatDate } from "@/lib/utils"
 import { POSITIONS } from "@/lib/constants"
 import type { Team, TeamMember, TeamNeed, User } from "@/lib/types"
@@ -30,8 +31,26 @@ export default function TeamDetailPage() {
   const [newNeedDesc, setNewNeedDesc] = useState("")
   const [applicationMsg, setApplicationMsg] = useState("")
   const [showApply, setShowApply] = useState(false)
+  const [badgeUploading, setBadgeUploading] = useState(false)
   const { user } = useAuth()
   const router = useRouter()
+
+  const handleBadgeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !team) return
+    setBadgeUploading(true)
+    try {
+      const res = await uploadFiles("teamBadge", { files: [file] })
+      const url = res?.[0]?.url
+      if (url) {
+        await updateById("teams", team.id, { badge_url: url })
+        setTeam({ ...team, badge_url: url })
+      }
+    } catch {
+      console.error("Error al subir escudo")
+    }
+    setBadgeUploading(false)
+  }
 
   useEffect(() => {
     loadTeam()
@@ -111,14 +130,35 @@ export default function TeamDetailPage() {
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <Avatar className="w-16 h-16">
-              {team.badge_url ? (
-                <AvatarImage src={team.badge_url} alt={team.name} />
-              ) : null}
-              <AvatarFallback className="text-primary font-bold text-2xl">
-                {team.name[0]}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+              <Avatar className="w-16 h-16">
+                {team.badge_url ? (
+                  <AvatarImage src={team.badge_url} alt={team.name} />
+                ) : null}
+                <AvatarFallback className="text-primary font-bold text-2xl">
+                  {team.name[0]}
+                </AvatarFallback>
+              </Avatar>
+              {user?.id === team.created_by && (
+                <Label
+                  htmlFor="badge-upload"
+                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"
+                >
+                  {badgeUploading ? (
+                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                  ) : (
+                    <Upload className="h-5 w-5 text-white" />
+                  )}
+                  <input
+                    id="badge-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleBadgeUpload}
+                  />
+                </Label>
+              )}
+            </div>
             <div className="flex-1">
               <h1 className="text-2xl font-bold">{team.name}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
