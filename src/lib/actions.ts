@@ -74,10 +74,13 @@ export async function getFeedPosts() {
 export async function getPostComments(postIds: string[]) {
   if (postIds.length === 0) return []
   const placeholders = postIds.map((_, i) => `$${i + 1}`).join(",")
-  return await query<Comment>(
-    `SELECT * FROM comments WHERE post_id IN (${placeholders}) ORDER BY created_at ASC`,
+  const data = await query<Comment & { user: Record<string, unknown> }>(
+    `SELECT c.*, row_to_json(u.*) as user
+     FROM comments c JOIN users u ON u.id = c.user_id
+     WHERE c.post_id IN (${placeholders}) ORDER BY c.created_at ASC`,
     postIds
   )
+  return data.map(c => ({ ...c, user: c.user as unknown as User }))
 }
 
 export async function getUserLikes(userId: string, postIds: string[]) {
@@ -89,13 +92,13 @@ export async function getUserLikes(userId: string, postIds: string[]) {
   )
 }
 
-export async function createPost(content: string) {
+export async function createPost(content: string, imageUrls?: string[]) {
   const user = await getCurrentUser()
   assertAuth(user)
   await insert("posts", {
     user_id: user.id,
     content,
-    image_urls: [],
+    image_urls: imageUrls ?? [],
     video_url: null,
     likes_count: 0,
     comments_count: 0,

@@ -1,22 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getFeedPosts, getPostComments, getUserLikes, createPost, toggleLike, addComment } from "@/lib/actions"
+import { uploadFiles } from "@/lib/uploadthing"
 import { useAuth } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import { Heart, MessageCircle, Send, Image as ImageIcon, Loader2 } from "lucide-react"
+import { Heart, MessageCircle, Send, Image as ImageIcon, ArrowLeft, Loader2, X } from "lucide-react"
 import { getInitials, formatRelativeTime } from "@/lib/utils"
+import Link from "next/link"
 import type { Post } from "@/lib/types"
 
 export default function FeedPage() {
   const { user: authUser } = useAuth()
   const queryClient = useQueryClient()
   const [newPost, setNewPost] = useState("")
+  const [postFiles, setPostFiles] = useState<File[]>([])
+  const [postPreviews, setPostPreviews] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({})
 
@@ -49,23 +55,58 @@ export default function FeedPage() {
 
   const likedSet = new Set(likedPostIds.map((l) => l.post_id))
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).slice(0, 4 - postFiles.length)
+    setPostFiles(prev => [...prev, ...files])
+    for (const file of files) {
+      const url = URL.createObjectURL(file)
+      setPostPreviews(prev => [...prev, url])
+    }
+    if (e.target) e.target.value = ""
+  }
+
+  const removeFile = (index: number) => {
+    URL.revokeObjectURL(postPreviews[index])
+    setPostFiles(prev => prev.filter((_, i) => i !== index))
+    setPostPreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
   const createPostMutation = useMutation({
-    mutationFn: () => createPost(newPost.trim()),
+    mutationFn: async () => {
+      let imageUrls: string[] = []
+      if (postFiles.length > 0) {
+        setUploading(true)
+        const res = await uploadFiles("postImage", { files: postFiles })
+        imageUrls = res.map(r => r.url).filter(Boolean)
+      }
+      return createPost(newPost.trim(), imageUrls)
+    },
     onSuccess: () => {
       setNewPost("")
+      setPostFiles([])
+      postPreviews.forEach(u => URL.revokeObjectURL(u))
+      setPostPreviews([])
+      setUploading(false)
       queryClient.invalidateQueries({ queryKey: ["feed"] })
+    },
+    onError: () => {
+      setUploading(false)
     },
   })
 
   const toggleLikeMutation = useMutation({
     mutationFn: (postId: string) => toggleLike(postId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["feed"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feed"] })
+      queryClient.invalidateQueries({ queryKey: ["feed-likes"] })
+    },
   })
 
   const addCommentMutation = useMutation({
     mutationFn: ({ postId, content }: { postId: string; content: string }) => addComment(postId, content),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed"] })
+      queryClient.invalidateQueries({ queryKey: ["feed-comments"] })
     },
   })
 
@@ -78,9 +119,14 @@ export default function FeedPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Feed</h1>
-        <p className="text-muted-foreground">Últimas novedades de la comunidad</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Feed</h1>
+          <p className="text-muted-foreground">Últimas novedades de la comunidad</p>
+        </div>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard"><ArrowLeft className="h-4 w-4 mr-2" />Atrás</Link>
+        </Button>
       </div>
 
       <Card>
@@ -98,19 +144,44 @@ export default function FeedPage() {
                 rows={3}
                 className="resize-none"
               />
+              {postPreviews.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {postPreviews.map((url, i) => (
+                    <div key={i} className="relative">
+                      <img src={url} alt="" className="h-20 w-20 object-cover rounded-md border" />
+                      <button onClick={() => removeFile(i)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" disabled>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={postFiles.length >= 4}
+                  >
                     <ImageIcon className="h-4 w-4" />
                   </Button>
                 </div>
                 <Button
                   size="sm"
                   onClick={() => createPostMutation.mutate()}
-                  disabled={!newPost.trim() || createPostMutation.isPending}
+                  disabled={(!newPost.trim() && postFiles.length === 0) || createPostMutation.isPending}
                 >
                   {createPostMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                  Publicar
+                  {uploading ? "Subiendo..." : "Publicar"}
                 </Button>
               </div>
             </div>
@@ -129,22 +200,37 @@ export default function FeedPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {posts.map((post) => (
+          {posts.map((post) => {
+            const p = post as Post & { user: { id: string; full_name: string; avatar_url: string | null } }
+            const images = p.image_urls || []
+            return (
             <Card key={post.id}>
               <CardHeader className="p-4 pb-0">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={post.user?.avatar_url || undefined} />
-                    <AvatarFallback>{post.user ? getInitials(post.user.full_name) : "?"}</AvatarFallback>
+                    <AvatarImage src={p.user?.avatar_url || undefined} />
+                    <AvatarFallback>{p.user ? getInitials(p.user.full_name) : "?"}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-sm font-medium">{post.user?.full_name || "Usuario"}</p>
+                    <p className="text-sm font-medium">{p.user?.full_name || "Usuario"}</p>
                     <p className="text-xs text-muted-foreground">{formatRelativeTime(post.created_at)}</p>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-4">
-                <p className="text-sm">{post.content}</p>
+              <CardContent className="p-4 space-y-3">
+                <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+                {images.length > 0 && (
+                  <div className={`grid gap-2 ${images.length === 1 ? "grid-cols-1" : images.length === 2 ? "grid-cols-2" : images.length === 3 ? "grid-cols-2" : "grid-cols-2"}`}>
+                    {images.map((url, i) => (
+                      <img
+                        key={i}
+                        src={url}
+                        alt=""
+                        className={`w-full object-cover rounded-lg border ${images.length === 1 ? "max-h-96" : "h-40"} ${images.length === 3 && i === 0 ? "row-span-2 h-full" : ""}`}
+                      />
+                    ))}
+                  </div>
+                )}
               </CardContent>
               <CardFooter className="p-4 pt-0 flex flex-col gap-3">
                 <div className="flex items-center gap-4">
@@ -173,20 +259,25 @@ export default function FeedPage() {
                       </Button>
                     </div>
                     <div className="space-y-2">
-                      {(commentsByPost[post.id] || []).slice(0, 3).map((comment) => (
-                        <div key={comment.id} className="flex gap-2">
+                      {(commentsByPost[post.id] || []).map((comment) => {
+                        const c = comment as typeof comment & { user: { id: string; full_name: string; avatar_url: string | null } }
+                        return (
+                        <div key={c.id} className="flex gap-2">
                           <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-[10px]">{getInitials(comment.user_id)}</AvatarFallback>
+                            <AvatarImage src={c.user?.avatar_url || undefined} />
+                            <AvatarFallback className="text-[10px]">{c.user ? getInitials(c.user.full_name) : "?"}</AvatarFallback>
                           </Avatar>
-                          <p className="text-sm"><span className="font-medium">{comment.user_id?.slice(0, 8)}</span> {comment.content}</p>
+                          <p className="text-sm"><span className="font-medium">{c.user?.full_name || "Usuario"}</span> {c.content}</p>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 )}
               </CardFooter>
             </Card>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
