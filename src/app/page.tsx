@@ -1,8 +1,10 @@
 import Link from "next/link"
+import { Suspense } from "react"
 import { Button } from "@/components/ui/button"
-import { Trophy, Search, Users, Calendar, MessageCircle, Shield, Star } from "lucide-react"
+import { Trophy, Search, Users, Calendar, MessageCircle, Shield, Star, Loader2 } from "lucide-react"
 import { ThemeToggle } from "@/components/landing/theme-toggle"
 import { MobileNav } from "@/components/landing/mobile-nav"
+import { AuthNav } from "@/components/landing/auth-nav"
 
 export default function LandingPage() {
   return (
@@ -19,10 +21,9 @@ export default function LandingPage() {
             <Link href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Funcionalidades</Link>
             <Link href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cómo funciona</Link>
             <Link href="#premium" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Premium</Link>
-            <Link href="/auth/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Iniciar sesión</Link>
-            <Button asChild>
-              <Link href="/auth/register">Registrarse</Link>
-            </Button>
+            <Suspense fallback={<Loader2 className="h-4 w-4 animate-spin" />}>
+              <AuthNav />
+            </Suspense>
             <ThemeToggle />
           </nav>
 
