@@ -295,12 +295,18 @@ export async function applyToOpportunity(opportunityId: string) {
 // ─── Challenges ─────────────────────────────────────────
 
 export async function getChallenges() {
-  const data = await query<Challenge & { team: Record<string, unknown> }>(
-    `SELECT c.*, row_to_json(t.*) as team
-     FROM challenges c JOIN teams t ON t.id = c.team_id
+  const data = await query<Challenge & { team: Record<string, unknown>; opponent_team: Record<string, unknown> | null }>(
+    `SELECT c.*, row_to_json(t.*) as team, row_to_json(ot.*) as opponent_team
+     FROM challenges c
+     JOIN teams t ON t.id = c.team_id
+     LEFT JOIN teams ot ON ot.id = c.opponent_team_id
      ORDER BY c.created_at DESC`
   )
-  return data.map(c => ({ ...c, team: c.team as unknown as Team }))
+  return data.map(c => ({
+    ...c,
+    team: c.team as unknown as Team,
+    opponent_team: c.opponent_team ? (c.opponent_team as unknown as Team) : null,
+  }))
 }
 
 export async function createChallenge(data: {
@@ -319,6 +325,13 @@ export async function acceptChallenge(challengeId: string, opponentTeamId: strin
   await updateById("challenges", challengeId, {
     opponent_team_id: opponentTeamId, status: "accepted",
   })
+  revalidatePath("/challenges")
+}
+
+export async function cancelChallenge(challengeId: string) {
+  const user = await getCurrentUser()
+  assertAuth(user)
+  await updateById("challenges", challengeId, { status: "cancelled" })
   revalidatePath("/challenges")
 }
 
