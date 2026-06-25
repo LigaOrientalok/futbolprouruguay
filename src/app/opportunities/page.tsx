@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Calendar, MapPin, Plus, Loader2, Send, Building2, AlertCircle } from "lucide-react"
+import { Calendar, MapPin, Plus, Loader2, Send, Building2, AlertCircle, Home } from "lucide-react"
+import Link from "next/link"
 import { formatDate } from "@/lib/utils"
 import { POSITIONS, CATEGORIES } from "@/lib/constants"
 import type { Position, Category } from "@/lib/types"
@@ -89,7 +90,11 @@ export default function OpportunitiesPage() {
           <h1 className="text-2xl font-bold">Oportunidades</h1>
           <p className="text-muted-foreground">Equipos buscando jugadores como vos</p>
         </div>
-        {myTeams.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/"><Home className="h-4 w-4 mr-2" />Principal</Link>
+          </Button>
+          {myTeams.length > 0 && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />Publicar oportunidad</Button>
