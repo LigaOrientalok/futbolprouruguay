@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Clock, MapPin, Plus, Loader2, Swords, Check, X, AlertCircle } from "lucide-react"
+import { Calendar, Clock, MapPin, Plus, Loader2, Swords, Check, X, ArrowLeft, AlertCircle } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { CATEGORIES } from "@/lib/constants"
 import Link from "next/link"
@@ -104,7 +104,7 @@ export default function ChallengesPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
-            <Link href="/"><MapPin className="h-4 w-4 mr-2" />Principal</Link>
+            <Link href="/dashboard"><ArrowLeft className="h-4 w-4 mr-2" />Atrás</Link>
           </Button>
           {myTeams.length > 0 && (
             <Dialog>

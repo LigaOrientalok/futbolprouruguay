@@ -331,7 +331,13 @@ export async function acceptChallenge(challengeId: string, opponentTeamId: strin
 export async function cancelChallenge(challengeId: string) {
   const user = await getCurrentUser()
   assertAuth(user)
-  await updateById("challenges", challengeId, { status: "cancelled" })
+  const challenge = await findById<Challenge>("challenges", challengeId)
+  if (!challenge) throw new Error("Desafío no encontrado")
+  if (challenge.status === "accepted") {
+    await updateById("challenges", challengeId, { status: "open", opponent_team_id: null })
+  } else {
+    await updateById("challenges", challengeId, { status: "cancelled" })
+  }
   revalidatePath("/challenges")
 }
 
