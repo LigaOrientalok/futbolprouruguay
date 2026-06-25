@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { useQuery, keepPreviousData } from "@tanstack/react-query"
-import { searchPlayers } from "@/lib/actions"
+import { useState, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { getAllUsersWithProfiles } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,12 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, MapPin, Filter, X } from "lucide-react"
 import { getInitials } from "@/lib/utils"
 import { POSITIONS, CATEGORIES, LEVELS, AVAILABILITIES } from "@/lib/constants"
-import type { User, PlayerProfile } from "@/lib/types"
 
 export default function SearchPage() {
   const [showFilters, setShowFilters] = useState(false)
+  const [searchText, setSearchText] = useState("")
   const [filters, setFilters] = useState({
-    query: "",
     position: "",
     category: "",
     level: "",
@@ -26,16 +25,47 @@ export default function SearchPage() {
   })
 
   const { data: results = [], isLoading } = useQuery({
-    queryKey: ["search-players", filters.position, filters.category, filters.level, filters.availability, filters.city, filters.query],
-    queryFn: () => searchPlayers(filters),
-    placeholderData: keepPreviousData,
+    queryKey: ["users-with-profiles"],
+    queryFn: () => getAllUsersWithProfiles(),
   })
 
+  const filtered = useMemo(() => {
+    let list = results
+
+    if (filters.position) {
+      list = list.filter(u => u.profile?.main_position === filters.position)
+    }
+    if (filters.category) {
+      list = list.filter(u => u.profile?.category === filters.category)
+    }
+    if (filters.level) {
+      list = list.filter(u => u.profile?.level === filters.level)
+    }
+    if (filters.availability) {
+      list = list.filter(u => u.profile?.availability === filters.availability)
+    }
+    if (filters.city) {
+      const c = filters.city.toLowerCase()
+      list = list.filter(u => u.profile?.city?.toLowerCase().includes(c))
+    }
+    if (searchText) {
+      const q = searchText.toLowerCase()
+      list = list.filter(u =>
+        u.full_name?.toLowerCase().includes(q) ||
+        u.username?.toLowerCase().includes(q) ||
+        u.profile?.city?.toLowerCase().includes(q)
+      )
+    }
+
+    return list
+  }, [results, filters, searchText])
+
   const clearFilters = () => {
-    setFilters({ query: "", position: "", category: "", level: "", availability: "", city: "" })
+    setFilters({ position: "", category: "", level: "", availability: "", city: "" })
+    setSearchText("")
   }
 
-  const hasActiveFilters = Object.values(filters).some((v) => v !== "")
+  const hasActiveFilters = Object.values(filters).some((v) => v !== "") || searchText !== ""
 
   return (
     <div className="space-y-6">
@@ -50,8 +80,8 @@ export default function SearchPage() {
           <Input
             placeholder="Buscar por nombre, usuario o ciudad..."
             className="pl-9"
-            value={filters.query}
-            onChange={(e) => setFilters({ ...filters, query: e.target.value })}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
           />
         </div>
         <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
@@ -110,49 +140,42 @@ export default function SearchPage() {
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
-      ) : results.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>No se encontraron jugadores con esos filtros</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {results.map((user) => {
-            const profile = user.profile ?? null
-            return (
-              <Card key={user.id} className="hover:bg-accent/50 transition-colors">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={user.avatar_url || undefined} />
-                      <AvatarFallback>{getInitials(user.full_name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium truncate">{user.full_name}</p>
-                        {user.subscription_tier === "premium" && (
-                          <Badge variant="default" className="text-[10px] h-5">Premium</Badge>
-                        )}
-                      </div>
-                      {profile && (
-                        <>
-                          <p className="text-xs text-muted-foreground">{profile.main_position}</p>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                            <MapPin className="h-3 w-3" />
-                            {profile.city}{profile.neighborhood ? `, ${profile.neighborhood}` : ""}
-                          </div>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            <Badge variant="secondary" className="text-[10px]">{profile.category}</Badge>
-                            <Badge variant="outline" className="text-[10px]">{profile.level}</Badge>
-                          </div>
-                        </>
+          {filtered.map((user) => (
+            <Card key={user.id} className="hover:bg-accent/50 transition-colors">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={user.avatar_url || undefined} />
+                    <AvatarFallback>{getInitials(user.full_name)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium truncate">{user.full_name}</p>
+                      {user.subscription_tier === "premium" && (
+                        <Badge variant="default" className="text-[10px] h-5">Premium</Badge>
                       )}
                     </div>
+                    <p className="text-xs text-muted-foreground">{user.profile?.main_position || "Sin posición"}</p>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                      <MapPin className="h-3 w-3" />
+                      {user.profile?.city || "Sin ubicación"}
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {user.profile?.category && <Badge variant="secondary" className="text-[10px]">{user.profile.category}</Badge>}
+                      {user.profile?.level && <Badge variant="outline" className="text-[10px]">{user.profile.level}</Badge>}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>

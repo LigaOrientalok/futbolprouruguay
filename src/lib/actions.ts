@@ -394,37 +394,14 @@ export async function toggleUserRole(userId: string) {
 
 // ─── Search ─────────────────────────────────────────────
 
-export async function searchPlayers(filters: {
-  position?: string; category?: string; level?: string
-  availability?: string; city?: string; query?: string
-}) {
-  let sql = `SELECT u.*, row_to_json(pp.*) as profile
-             FROM users u LEFT JOIN player_profiles pp ON pp.user_id = u.id
-             WHERE u.role != 'admin'`
-  const conditions: string[] = []
-  const params: (string | number)[] = []
-  let i = 1
-
-  if (filters.position) {
-    conditions.push(`(pp.main_position = $${i} OR pp.secondary_positions @> ARRAY[$${i}])`)
-    params.push(filters.position); i++
-  }
-  if (filters.category) { conditions.push(`pp.category = $${i}`); params.push(filters.category); i++ }
-  if (filters.level) { conditions.push(`pp.level = $${i}`); params.push(filters.level); i++ }
-  if (filters.availability) { conditions.push(`pp.availability = $${i}`); params.push(filters.availability); i++ }
-  if (filters.city) { conditions.push(`pp.city ILIKE $${i}`); params.push(`%${filters.city}%`); i++ }
-  if (filters.query) {
-    const q = `%${filters.query.toLowerCase()}%`
-    conditions.push(`(LOWER(u.full_name) ILIKE $${i} OR LOWER(u.username) ILIKE $${i} OR LOWER(pp.city) ILIKE $${i})`)
-    params.push(q); i++
-  }
-
-  if (conditions.length > 0) sql += ` AND ${conditions.join(" AND ")}`
-  sql += ` ORDER BY u.subscription_tier DESC LIMIT 50`
-
-  const results = await query<User & { profile: string | Record<string, unknown> }>(sql, params)
-
-  return results.map(u => ({
+export async function getAllUsersWithProfiles() {
+  const data = await query<User & { profile: string | Record<string, unknown> }>(
+    `SELECT u.*, row_to_json(pp.*) as profile
+     FROM users u LEFT JOIN player_profiles pp ON pp.user_id = u.id
+     WHERE u.role != 'admin'
+     ORDER BY u.subscription_tier DESC LIMIT 200`
+  )
+  return data.map(u => ({
     ...u,
     profile: typeof u.profile === "string" ? JSON.parse(u.profile) : u.profile,
   })) as (User & { profile?: PlayerProfile })[]
