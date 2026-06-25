@@ -60,8 +60,10 @@ export function SidebarNav({
 }) {
   const pathname = usePathname()
 
+  const adminSection = { label: "Admin", items: [{ href: "/admin", icon: Shield, label: "Panel Admin" }] }
+  const socialIndex = sections.findIndex((s) => s.label === "Social")
   const allSections = userRole === "admin"
-    ? [...sections, { label: "Admin", items: [{ href: "/admin", icon: Shield, label: "Panel Admin" }] }]
+    ? [...sections.slice(0, socialIndex + 1), adminSection, ...sections.slice(socialIndex + 1)]
     : sections
 
   return (
