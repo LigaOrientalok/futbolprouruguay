@@ -66,7 +66,7 @@ export default function DashboardLayout({
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
             </div>
-            <SidebarNav onItemClick={() => setSidebarOpen(false)} />
+            <SidebarNav onItemClick={() => setSidebarOpen(false)} userRole={user?.role} />
             <div className="mt-6 pt-6 border-t">
               <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent transition-colors">
                 <LogOut className="h-4 w-4" />
@@ -86,7 +86,7 @@ export default function DashboardLayout({
             <span className="font-bold">FutbolMatch</span>
           </div>
           <div className="flex-1 flex flex-col justify-between p-4">
-            <SidebarNav />
+            <SidebarNav userRole={user?.role} />
             <div className="pt-4 border-t">
               <div className="flex items-center gap-3 px-3 py-2 mb-2">
                 <div className="relative">

@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard, Users, Trophy, Search, MessageCircle,
-  Calendar, Swords, Star, Award, ShoppingBag,
+  Calendar, Swords, Star, Award, ShoppingBag, Shield,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -53,14 +53,20 @@ const sections = [
 
 export function SidebarNav({
   onItemClick,
+  userRole,
 }: {
   onItemClick?: () => void
+  userRole?: string | null
 }) {
   const pathname = usePathname()
 
+  const allSections = userRole === "admin"
+    ? [...sections, { label: "Admin", items: [{ href: "/admin", icon: Shield, label: "Panel Admin" }] }]
+    : sections
+
   return (
     <nav className="space-y-4">
-      {sections.map((section) => (
+      {allSections.map((section) => (
         <div key={section.label}>
           <p className="px-3 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1">
             {section.label}
