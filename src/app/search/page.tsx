@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Search, MapPin, X } from "lucide-react"
+import { Search, X } from "lucide-react"
+import Link from "next/link"
 import { getInitials } from "@/lib/utils"
 
 export default function SearchPage() {
@@ -39,9 +40,14 @@ export default function SearchPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Buscar jugadores</h1>
-        <p className="text-muted-foreground">Encontrá jugadores por nombre o usuario</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Buscar jugadores</h1>
+          <p className="text-muted-foreground">Encontrá jugadores por nombre o usuario</p>
+        </div>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard">Ir al Dashboard</Link>
+        </Button>
       </div>
 
       <div className="relative flex-1 max-w-md">
