@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MapPin, Users, ArrowLeft, Send, UserPlus, Home, Upload } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import { getInitials, formatDate } from "@/lib/utils"
 import { POSITIONS } from "@/lib/constants"
 import type { Team, TeamMember, User } from "@/lib/types"
@@ -179,7 +180,7 @@ export default function TeamDetailPage() {
 
         <TabsContent value="roster" className="space-y-4">
           {members.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No hay jugadores en este equipo aún</p>
+            <EmptyState variant="team" title="Sin jugadores" description="No hay jugadores en este equipo aún" />
           ) : (
             <div className="grid sm:grid-cols-2 gap-3">
               {members.map((member) => (
@@ -218,7 +219,7 @@ export default function TeamDetailPage() {
             </Card>
           )}
           {needs.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No hay necesidades registradas</p>
+            <EmptyState variant="team" title="Sin necesidades" description="No hay necesidades registradas" />
           ) : (
             needs.map((need) => (
               <Card key={need.id}>

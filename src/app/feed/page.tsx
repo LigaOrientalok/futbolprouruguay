@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useMemo } from "react"
+import { useState, useRef, useMemo, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getFeedPosts, getPostComments, getUserLikes, createPost, toggleLike, addComment, getUsers } from "@/lib/actions"
 import { uploadFiles } from "@/lib/uploadthing"
@@ -10,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import { Heart, MessageCircle, Send, Image as ImageIcon, ArrowLeft, Loader2, X } from "lucide-react"
+import { Heart, MessageCircle, Send, Image as ImageIcon, ArrowLeft, Loader2, X, ChevronLeft, ChevronRight, Star } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
+import { toast } from "@/components/ui/use-toast"
 import { getInitials, formatRelativeTime } from "@/lib/utils"
 import Link from "next/link"
 import type { Post } from "@/lib/types"
@@ -124,6 +126,78 @@ function renderText(text: string) {
   })
 }
 
+function Lightbox({
+  images,
+  currentIndex,
+  onClose,
+  onPrev,
+  onNext,
+}: {
+  images: string[]
+  currentIndex: number
+  onClose: () => void
+  onPrev: () => void
+  onNext: () => void
+}) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+      if (e.key === "ArrowLeft") onPrev()
+      if (e.key === "ArrowRight") onNext()
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [onClose, onPrev, onNext])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); onClose() }}
+        className="absolute top-4 right-4 text-white p-2 hover:bg-white/10 rounded-full z-10 transition-colors"
+        aria-label="Cerrar"
+      >
+        <X className="h-8 w-8" />
+      </button>
+
+      {images.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev() }}
+          className="absolute left-4 text-white p-2 hover:bg-white/10 rounded-full transition-colors z-10"
+          aria-label="Anterior"
+        >
+          <ChevronLeft className="h-8 w-8" />
+        </button>
+      )}
+
+      <img
+        src={images[currentIndex]}
+        alt=""
+        className="max-h-[90vh] max-w-[90vw] object-contain select-none"
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      {images.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext() }}
+          className="absolute right-4 text-white p-2 hover:bg-white/10 rounded-full transition-colors z-10"
+          aria-label="Siguiente"
+        >
+          <ChevronRight className="h-8 w-8" />
+        </button>
+      )}
+
+      {images.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1 rounded-full">
+          {currentIndex + 1} / {images.length}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function FeedPage() {
   const { user: authUser } = useAuth()
   const queryClient = useQueryClient()
@@ -134,6 +208,8 @@ export default function FeedPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({})
+  const [lightboxPostId, setLightboxPostId] = useState<string | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ["feed"],
@@ -164,6 +240,17 @@ export default function FeedPage() {
 
   const likedSet = new Set(likedPostIds.map((l) => l.post_id))
 
+  const lightboxPost = lightboxPostId ? posts.find((p) => p.id === lightboxPostId) : null
+  const lightboxImages = lightboxPost ? (lightboxPost as Post & { image_urls: string[] }).image_urls || [] : []
+
+  const handleLightboxPrev = () => {
+    setLightboxIndex((prev) => (prev > 0 ? prev - 1 : lightboxImages.length - 1))
+  }
+
+  const handleLightboxNext = () => {
+    setLightboxIndex((prev) => (prev < lightboxImages.length - 1 ? prev + 1 : 0))
+  }
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).slice(0, 4 - postFiles.length)
     setPostFiles(prev => [...prev, ...files])
@@ -190,14 +277,15 @@ export default function FeedPage() {
       }
       return createPost(newPost.trim(), imageUrls)
     },
-    onSuccess: () => {
-      setNewPost("")
-      setPostFiles([])
-      postPreviews.forEach(u => URL.revokeObjectURL(u))
-      setPostPreviews([])
-      setUploading(false)
-      queryClient.invalidateQueries({ queryKey: ["feed"] })
-    },
+      onSuccess: () => {
+        setNewPost("")
+        setPostFiles([])
+        postPreviews.forEach(u => URL.revokeObjectURL(u))
+        setPostPreviews([])
+        setUploading(false)
+        queryClient.invalidateQueries({ queryKey: ["feed"] })
+        toast({ title: "Publicado", description: "Tu publicación se compartió correctamente", variant: "success" })
+      },
     onError: () => {
       setUploading(false)
     },
@@ -208,6 +296,10 @@ export default function FeedPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed"] })
       queryClient.invalidateQueries({ queryKey: ["feed-likes"] })
+      toast({ title: "Like actualizado", description: "Cambiaste tu reacción", variant: "success" })
+    },
+    onError: () => {
+      toast({ title: "Error", description: "No se pudo actualizar el like", variant: "destructive" })
     },
   })
 
@@ -303,17 +395,14 @@ export default function FeedPage() {
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>No hay publicaciones aún</p>
-        </div>
+        <EmptyState variant="feed" action={{ label: "Sé el primero", href: "#" }} />
       ) : (
         <div className="space-y-4">
-          {posts.map((post) => {
-            const p = post as Post & { user: { id: string; full_name: string; avatar_url: string | null } }
+          {posts.map((post, index) => {
+            const p = post as Post & { user: { id: string; full_name: string; avatar_url: string | null }; image_urls: string[] }
             const images = p.image_urls || []
             return (
-            <Card key={post.id}>
+            <Card key={post.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
               <CardHeader className="p-4 pb-0">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
@@ -331,7 +420,11 @@ export default function FeedPage() {
                 {images.length > 0 && (
                   <div className={`grid gap-1 ${images.length === 1 ? "grid-cols-1" : images.length === 2 ? "grid-cols-2" : images.length === 4 ? "grid-cols-2" : "grid-cols-2"}`}>
                     {images.map((url, i) => (
-                      <div key={i} className={`relative overflow-hidden rounded-lg border bg-muted ${images.length === 1 ? "max-h-[500px]" : images.length === 3 && i === 0 ? "row-span-2" : ""}`}>
+                      <div
+                        key={i}
+                        className={`relative overflow-hidden rounded-lg border bg-muted cursor-pointer ${images.length === 1 ? "max-h-[500px]" : images.length === 3 && i === 0 ? "row-span-2" : ""}`}
+                        onClick={() => { setLightboxPostId(post.id); setLightboxIndex(i) }}
+                      >
                         <img
                           src={url}
                           alt=""
@@ -394,6 +487,16 @@ export default function FeedPage() {
             )
           })}
         </div>
+      )}
+
+      {lightboxPostId && lightboxImages.length > 0 && (
+        <Lightbox
+          images={lightboxImages}
+          currentIndex={lightboxIndex}
+          onClose={() => setLightboxPostId(null)}
+          onPrev={handleLightboxPrev}
+          onNext={handleLightboxNext}
+        />
       )}
     </div>
   )

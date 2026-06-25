@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Send, MessageCircle, ArrowLeft } from "lucide-react"
+import { Send, MessageCircle, ArrowLeft, CheckCheck } from "lucide-react"
 import { getInitials, formatRelativeTime } from "@/lib/utils"
+import { EmptyState } from "@/components/ui/empty-state"
 import type { User } from "@/lib/types"
 import { getPusherClient } from "@/lib/pusher/client"
 
@@ -100,34 +101,33 @@ export default function ChatPage() {
             </div>
             <ScrollArea className="flex-1">
               {chats.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Sin conversaciones</p>
-                </div>
+                <EmptyState variant="message" />
               ) : (
-                chats.map((chat) => (
-                  <button
-                    key={chat.id}
-                    onClick={() => { setActiveChat(chat.id); setShowMobileList(false) }}
-                    className={`w-full p-3 flex items-center gap-3 hover:bg-accent transition-colors text-left ${
-                      activeChat === chat.id ? "bg-accent" : ""
-                    }`}
-                  >
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={(chat as { otherUser?: User }).otherUser?.avatar_url || undefined} />
-                      <AvatarFallback>{(chat as { otherUser?: User }).otherUser ? getInitials((chat as { otherUser?: User }).otherUser!.full_name) : "?"}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{(chat as { otherUser?: User }).otherUser?.full_name || "Usuario"}</p>
-                      {chat.last_message && (
-                        <p className="text-xs text-muted-foreground truncate">{chat.last_message}</p>
+                <div className="py-1">
+                  {chats.map((chat) => (
+                    <button
+                      key={chat.id}
+                      onClick={() => { setActiveChat(chat.id); setShowMobileList(false) }}
+                      className={`w-full p-3 flex items-center gap-3 hover:bg-accent hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-left border-l-2 ${
+                        activeChat === chat.id ? "bg-accent border-l-primary" : "border-l-transparent"
+                      }`}
+                    >
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarImage src={(chat as { otherUser?: User }).otherUser?.avatar_url || undefined} />
+                        <AvatarFallback>{(chat as { otherUser?: User }).otherUser ? getInitials((chat as { otherUser?: User }).otherUser!.full_name) : "?"}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{(chat as { otherUser?: User }).otherUser?.full_name || "Usuario"}</p>
+                        {chat.last_message && (
+                          <p className="text-xs text-muted-foreground truncate">{chat.last_message}</p>
+                        )}
+                      </div>
+                      {chat.last_message_at && (
+                        <span className="text-[10px] text-muted-foreground shrink-0">{formatRelativeTime(chat.last_message_at)}</span>
                       )}
-                    </div>
-                    {chat.last_message_at && (
-                      <span className="text-[10px] text-muted-foreground">{formatRelativeTime(chat.last_message_at)}</span>
-                    )}
-                  </button>
-                ))
+                    </button>
+                  ))}
+                </div>
               )}
             </ScrollArea>
           </CardContent>
@@ -139,11 +139,11 @@ export default function ChatPage() {
         <Card className="flex-1 flex flex-col">
           {activeChat && activeChatData ? (
             <>
-              <div className="p-3 border-b flex items-center gap-3">
-                <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setShowMobileList(true)}>
+              <div className="p-3 border-b flex items-center gap-3 animate-fade-in">
+                <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setShowMobileList(true)}>
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-8 w-8 shrink-0">
                   <AvatarImage src={(activeChatData as { otherUser?: User }).otherUser?.avatar_url || undefined} />
                   <AvatarFallback>{(activeChatData as { otherUser?: User }).otherUser ? getInitials((activeChatData as { otherUser?: User }).otherUser!.full_name) : "?"}</AvatarFallback>
                 </Avatar>
@@ -151,15 +151,24 @@ export default function ChatPage() {
               </div>
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-3">
-                  {messages.map((msg) => (
-                    <div key={msg.id} className={`flex ${msg.sender_id === authUser?.id ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                  {messages.map((msg, index) => (
+                    <div
+                      key={msg.id}
+                      className={`flex animate-fade-in-up ${msg.sender_id === authUser?.id ? "justify-end" : "justify-start"}`}
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <div className={`max-w-[75%] shadow-sm px-3 py-2 text-sm ${
                         msg.sender_id === authUser?.id
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
+                          ? "bg-primary text-primary-foreground rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl"
+                          : "bg-muted rounded-tl-2xl rounded-tr-2xl rounded-br-2xl"
                       }`}>
                         <p>{msg.content}</p>
-                        <p className="text-[10px] opacity-70 mt-1">{formatRelativeTime(msg.created_at)}</p>
+                        <div className="flex items-center justify-end gap-1 mt-1">
+                          <span className="text-[10px] opacity-70">{formatRelativeTime(msg.created_at)}</span>
+                          {msg.sender_id === authUser?.id && (
+                            <CheckCheck className="h-3 w-3 text-primary-foreground/60" />
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

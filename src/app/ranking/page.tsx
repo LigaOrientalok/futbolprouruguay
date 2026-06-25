@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Medal, Star, TrendingUp, Award, MapPin, Target, Clock, ArrowLeft } from "lucide-react"
+import { Medal, Star, TrendingUp, Award, MapPin, Target, Clock, ArrowLeft, Crown } from "lucide-react"
 import Link from "next/link"
 import { getInitials } from "@/lib/utils"
 import type { User, PlayerProfile } from "@/lib/types"
@@ -49,18 +49,36 @@ export default function RankingPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {players.map((player, index) => {
               const profile = player.profile ?? null
+              const isTop3 = index < 3
+              const accentClass = index === 0
+                ? "bg-yellow-500/5 border-yellow-500"
+                : index === 1
+                  ? "bg-gray-300/5 border-gray-400"
+                  : index === 2
+                    ? "bg-amber-700/5 border-amber-700"
+                    : ""
+              const rankBg = index === 0
+                ? "bg-yellow-500"
+                : index === 1
+                  ? "bg-gray-400"
+                  : index === 2
+                    ? "bg-amber-700"
+                    : "bg-primary"
               return (
-                <Card key={player.id} className={index < 3 ? "border-primary/30" : ""}>
+                <Card key={player.id} className={`${isTop3 ? accentClass : ""}`}>
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
                       <div className="relative">
-                        <Avatar className="h-14 w-14">
+                        {index === 0 && (
+                          <div className="absolute -top-3 -left-3 z-10">
+                            <Crown className="h-5 w-5 text-yellow-500" />
+                          </div>
+                        )}
+                        <Avatar className={`h-14 w-14 ${isTop3 ? "ring-2 ring-offset-2" : ""} ${index === 0 ? "ring-yellow-500/50" : index === 1 ? "ring-gray-400/50" : index === 2 ? "ring-amber-700/50" : ""}`}>
                           <AvatarImage src={player.avatar_url || undefined} />
                           <AvatarFallback className="text-lg">{getInitials(player.full_name)}</AvatarFallback>
                         </Avatar>
-                        <div className={`absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
-                          index === 0 ? "bg-yellow-500" : index === 1 ? "bg-gray-400" : index === 2 ? "bg-amber-700" : "bg-primary"
-                        }`}>
+                        <div className={`absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${rankBg}`}>
                           {index + 1}
                         </div>
                       </div>
@@ -68,6 +86,9 @@ export default function RankingPage() {
                         <div className="flex items-center gap-2">
                           <p className="font-semibold truncate">{player.full_name}</p>
                           {player.subscription_tier === "premium" && <Badge variant="default" className="text-[10px]">Premium</Badge>}
+                          {index === 0 && <Medal className="h-4 w-4 text-yellow-500 shrink-0" />}
+                          {index === 1 && <Medal className="h-4 w-4 text-gray-400 shrink-0" />}
+                          {index === 2 && <Medal className="h-4 w-4 text-amber-700 shrink-0" />}
                         </div>
                         {profile && (
                           <>
@@ -136,7 +157,7 @@ export default function RankingPage() {
                     <Star className="h-4 w-4" />
                     <span className="font-semibold">Jugador de la Semana</span>
                   </div>
-                  <Avatar className="h-24 w-24 mx-auto mb-4 ring-4 ring-yellow-500/30">
+                  <Avatar className="h-24 w-24 mx-auto mb-4 ring-4 ring-yellow-500/30 animate-pulse-glow">
                     <AvatarImage src={players[0]?.avatar_url || undefined} />
                     <AvatarFallback className="text-2xl">{getInitials(players[0]?.full_name)}</AvatarFallback>
                   </Avatar>

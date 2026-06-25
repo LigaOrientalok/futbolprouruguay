@@ -10,7 +10,7 @@ import type { Post } from "@/lib/types"
 
 export function RecentFeed({ posts }: { posts: Post[] }) {
   return (
-    <Card>
+    <Card className="animate-fade-in-up">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">Feed reciente</CardTitle>
         <Button variant="ghost" size="sm" asChild>

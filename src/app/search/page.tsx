@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Search, X } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import { getInitials } from "@/lib/utils"
 import Link from "next/link"
 import type { Position, Category } from "@/lib/types"
@@ -133,11 +134,7 @@ export default function SearchPage() {
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>{users.length === 0 ? "No hay usuarios registrados" : "No se encontraron jugadores con esos filtros"}</p>
-          <p className="text-sm mt-1">Probá cambiar los filtros o buscar otro término</p>
-        </div>
+        <EmptyState variant="search" />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((user) => (

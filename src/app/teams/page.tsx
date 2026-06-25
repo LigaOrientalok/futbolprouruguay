@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Plus, Search, MapPin, Users, Home } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import type { Team } from "@/lib/types"
 import { CATEGORIES } from "@/lib/constants"
 
@@ -77,12 +78,7 @@ export default function TeamsPage() {
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
       ) : filteredTeams.length === 0 ? (
-        <div className="text-center py-16">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-lg font-medium">No hay equipos</h2>
-          <p className="text-muted-foreground">Sé el primero en crear un equipo</p>
-          <Button asChild className="mt-4"><Link href="/teams/new">Crear equipo</Link></Button>
-        </div>
+        <EmptyState variant="team" action={{ label: "Crear equipo", href: "/teams/new" }} />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredTeams.map((team) => (

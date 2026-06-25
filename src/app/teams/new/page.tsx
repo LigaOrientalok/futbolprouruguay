@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, ArrowLeft, Upload } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
 import Link from "next/link"
 import { CATEGORIES } from "@/lib/constants"
 import { slugify } from "@/lib/utils"
@@ -62,6 +63,7 @@ export default function NewTeamPage() {
       await createTeam({
         name, slug: slugify(name), city, neighborhood, category, description, badge_url: badgeUrl,
       })
+      toast({ title: "Equipo creado", description: `${name} se creó correctamente`, variant: "success" })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al crear el equipo")
       setLoading(false)

@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Clock, MapPin, Plus, Loader2, Swords, Check, X, ArrowLeft, AlertCircle } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
+import { toast } from "@/components/ui/use-toast"
 import { formatDate } from "@/lib/utils"
 import { CATEGORIES } from "@/lib/constants"
 import Link from "next/link"
@@ -58,8 +60,9 @@ export default function ChallengesPage() {
       await createChallenge(form)
       setForm({ team_id: "", date: "", time: "", category: "", zone: "", location_type: "home", description: "" })
       queryClient.invalidateQueries({ queryKey: ["challenges"] })
+      toast({ title: "Desafío creado", description: "Tu desafío se publicó correctamente", variant: "success" })
     } catch {
-      setError("Error al publicar el desafío. Intentá de nuevo.")
+      toast({ title: "Error", description: "Error al publicar el desafío. Intentá de nuevo.", variant: "destructive" })
     } finally {
       setCreating(false)
     }
@@ -73,8 +76,9 @@ export default function ChallengesPage() {
     try {
       await acceptChallenge(challengeId, myTeam.id)
       queryClient.invalidateQueries({ queryKey: ["challenges"] })
+      toast({ title: "Desafío aceptado", description: "Aceptaste el desafío correctamente", variant: "success" })
     } catch {
-      setError("Error al aceptar el desafío.")
+      toast({ title: "Error", description: "Error al aceptar el desafío.", variant: "destructive" })
     }
   }
 
@@ -83,8 +87,9 @@ export default function ChallengesPage() {
     try {
       await cancelChallenge(challengeId)
       queryClient.invalidateQueries({ queryKey: ["challenges"] })
+      toast({ title: "Desafío cancelado", description: "Cancelaste el desafío correctamente", variant: "success" })
     } catch {
-      setError("Error al cancelar el desafío.")
+      toast({ title: "Error", description: "Error al cancelar el desafío.", variant: "destructive" })
     }
   }
 
@@ -202,10 +207,7 @@ export default function ChallengesPage() {
 
           <TabsContent value="open" className="space-y-4 mt-4">
             {openChallenges.length === 0 ? (
-              <p className="text-center py-16 text-muted-foreground">
-                <Swords className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                No hay desafíos abiertos
-              </p>
+              <EmptyState variant="challenge" />
             ) : (
               openChallenges.map((challenge) => (
                 <Card key={challenge.id}>
@@ -246,10 +248,7 @@ export default function ChallengesPage() {
 
           <TabsContent value="accepted" className="space-y-4 mt-4">
             {acceptedChallenges.length === 0 ? (
-              <p className="text-center py-16 text-muted-foreground">
-                <Swords className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                No hay desafíos aceptados aún
-              </p>
+              <EmptyState variant="challenge" title="No hay desafíos aceptados" description="Aceptá un desafío para verlo aquí" />
             ) : (
               acceptedChallenges.map((challenge) => (
                 <Card key={challenge.id}>
@@ -283,10 +282,7 @@ export default function ChallengesPage() {
 
           <TabsContent value="cancelled" className="space-y-4 mt-4">
             {cancelledChallenges.length === 0 ? (
-              <p className="text-center py-16 text-muted-foreground">
-                <Swords className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                No hay desafíos cancelados
-              </p>
+              <EmptyState variant="challenge" title="No hay desafíos cancelados" />
             ) : (
               cancelledChallenges.map((challenge) => (
                 <Card key={challenge.id}>

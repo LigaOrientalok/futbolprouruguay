@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Camera, Save, Shield, Star, Trophy, Medal, CheckCircle2, AlertCircle } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
 import { getInitials } from "@/lib/utils"
 import { POSITIONS, CATEGORIES, LEVELS, AVAILABILITIES, LEGS } from "@/lib/constants"
 import type { User as UserType, PlayerProfile, Badge as BadgeType } from "@/lib/types"
@@ -94,6 +95,10 @@ export default function ProfilePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["player-profile", authUser?.id] })
       setActiveTab("view")
+      toast({ title: "Perfil guardado", description: "Tu perfil se actualizó correctamente", variant: "success" })
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Error al guardar el perfil. Intentá de nuevo.", variant: "destructive" })
     },
   })
 

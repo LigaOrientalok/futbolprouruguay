@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Calendar, MapPin, Plus, Loader2, Send, Building2, AlertCircle, Home } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
+import { toast } from "@/components/ui/use-toast"
 import Link from "next/link"
 import { formatDate } from "@/lib/utils"
 import { POSITIONS, CATEGORIES } from "@/lib/constants"
@@ -78,8 +80,9 @@ export default function OpportunitiesPage() {
     try {
       await applyToOpportunity(opportunityId)
       queryClient.invalidateQueries({ queryKey: ["opportunities"] })
+      toast({ title: "Postulación enviada", description: "Te postulaste correctamente", variant: "success" })
     } catch {
-      setError("Error al postularte. Intentá de nuevo.")
+      toast({ title: "Error", description: "Error al postularte. Intentá de nuevo.", variant: "destructive" })
     }
   }
 
@@ -167,10 +170,7 @@ export default function OpportunitiesPage() {
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
       ) : opportunities.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>No hay oportunidades disponibles</p>
-        </div>
+        <EmptyState variant="search" icon={Calendar} title="No hay oportunidades" description="No hay oportunidades disponibles en este momento" />
       ) : (
         <div className="space-y-4">
           {opportunities.map((opp) => (

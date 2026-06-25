@@ -7,9 +7,9 @@ import { Star } from "lucide-react"
 
 export function PremiumUpsell() {
   return (
-    <Card className="border-primary/50 bg-primary/5">
+    <Card className="border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
       <CardContent className="p-6 flex flex-col sm:flex-row items-center gap-4">
-        <Star className="h-8 w-8 text-primary" />
+        <Star className="h-8 w-8 text-primary animate-pulse-glow" />
         <div className="flex-1 text-center sm:text-left">
           <h3 className="font-semibold">Actualizá a Premium</h3>
           <p className="text-sm text-muted-foreground">

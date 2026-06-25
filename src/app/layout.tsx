@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { ThemeProvider } from "next-themes"
 import { AuthProvider } from "@/lib/auth-client"
 import { QueryProvider } from "@/lib/query-provider"
+import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -34,6 +35,7 @@ export default function RootLayout({
           >
             <AuthProvider>
               {children}
+              <Toaster />
             </AuthProvider>
           </ThemeProvider>
         </QueryProvider>

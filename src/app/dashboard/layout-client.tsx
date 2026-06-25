@@ -80,6 +80,7 @@ export default function DashboardLayout({
       {/* Desktop sidebar */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex flex-col flex-1 border-r bg-card">
+          <div className="h-1 bg-gradient-to-b from-primary/5 to-transparent flex-shrink-0" />
           <div className="flex items-center gap-2 h-14 px-6 border-b">
             <Trophy className="h-6 w-6 text-primary" />
             <span className="font-bold">FutbolMatch</span>
@@ -88,10 +89,13 @@ export default function DashboardLayout({
             <SidebarNav />
             <div className="pt-4 border-t">
               <div className="flex items-center gap-3 px-3 py-2 mb-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.avatar_url || undefined} />
-                  <AvatarFallback>{user ? getInitials(user.full_name) : "?"}</AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.avatar_url || undefined} />
+                    <AvatarFallback>{user ? getInitials(user.full_name) : "?"}</AvatarFallback>
+                  </Avatar>
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-card" />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{user?.full_name}</p>
                   <p className="text-xs text-muted-foreground truncate">@{user?.username}</p>
