@@ -225,6 +225,10 @@ export async function applyToTeam(teamId: string, message: string) {
 
 // ─── Player Profile ─────────────────────────────────────
 
+export async function getAllProfiles() {
+  return await query<PlayerProfile>("SELECT * FROM player_profiles")
+}
+
 export async function getPlayerProfile(userId: string) {
   const profiles = await query<PlayerProfile>(
     "SELECT * FROM player_profiles WHERE user_id = $1", [userId]
