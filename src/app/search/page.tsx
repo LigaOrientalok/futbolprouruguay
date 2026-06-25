@@ -17,10 +17,10 @@ export default function SearchPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [searchText, setSearchText] = useState("")
   const [filters, setFilters] = useState({
-    position: "",
-    category: "",
-    level: "",
-    availability: "",
+    position: "all",
+    category: "all",
+    level: "all",
+    availability: "all",
     city: "",
   })
 
@@ -32,16 +32,16 @@ export default function SearchPage() {
   const filtered = useMemo(() => {
     let list = results
 
-    if (filters.position) {
+    if (filters.position && filters.position !== "all") {
       list = list.filter(u => u.profile?.main_position === filters.position)
     }
-    if (filters.category) {
+    if (filters.category && filters.category !== "all") {
       list = list.filter(u => u.profile?.category === filters.category)
     }
-    if (filters.level) {
+    if (filters.level && filters.level !== "all") {
       list = list.filter(u => u.profile?.level === filters.level)
     }
-    if (filters.availability) {
+    if (filters.availability && filters.availability !== "all") {
       list = list.filter(u => u.profile?.availability === filters.availability)
     }
     if (filters.city) {
@@ -61,11 +61,11 @@ export default function SearchPage() {
   }, [results, filters, searchText])
 
   const clearFilters = () => {
-    setFilters({ position: "", category: "", level: "", availability: "", city: "" })
+    setFilters({ position: "all", category: "all", level: "all", availability: "all", city: "" })
     setSearchText("")
   }
 
-  const hasActiveFilters = Object.values(filters).some((v) => v !== "") || searchText !== ""
+  const hasActiveFilters = filters.position !== "all" || filters.category !== "all" || filters.level !== "all" || filters.availability !== "all" || filters.city !== "" || searchText !== ""
 
   return (
     <div className="space-y-6">
@@ -98,28 +98,28 @@ export default function SearchPage() {
         <Card>
           <CardContent className="p-4">
             <div className="grid sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              <Select value={filters.position} onValueChange={(v) => setFilters({ ...filters, position: v === "all" ? "" : v })}>
+              <Select value={filters.position} onValueChange={(v) => setFilters({ ...filters, position: v })}>
                 <SelectTrigger><SelectValue placeholder="Posición" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
                   {POSITIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={filters.category} onValueChange={(v) => setFilters({ ...filters, category: v === "all" ? "" : v })}>
+              <Select value={filters.category} onValueChange={(v) => setFilters({ ...filters, category: v })}>
                 <SelectTrigger><SelectValue placeholder="Categoría" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
                   {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={filters.level} onValueChange={(v) => setFilters({ ...filters, level: v === "all" ? "" : v })}>
+              <Select value={filters.level} onValueChange={(v) => setFilters({ ...filters, level: v })}>
                 <SelectTrigger><SelectValue placeholder="Nivel" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   {LEVELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={filters.availability} onValueChange={(v) => setFilters({ ...filters, availability: v === "all" ? "" : v })}>
+              <Select value={filters.availability} onValueChange={(v) => setFilters({ ...filters, availability: v })}>
                 <SelectTrigger><SelectValue placeholder="Disponibilidad" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
