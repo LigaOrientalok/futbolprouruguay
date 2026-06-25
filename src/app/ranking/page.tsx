@@ -2,11 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { getRankingPlayers } from "@/lib/actions"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Medal, Star, TrendingUp, Award, MapPin, Target, Clock } from "lucide-react"
+import { Medal, Star, TrendingUp, Award, MapPin, Target, Clock, ArrowLeft } from "lucide-react"
+import Link from "next/link"
 import { getInitials } from "@/lib/utils"
 import type { User, PlayerProfile } from "@/lib/types"
 
@@ -26,9 +28,14 @@ export default function RankingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Ranking de Jugadores</h1>
-        <p className="text-muted-foreground">Jugadores más activos y destacados de la comunidad</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Ranking de Jugadores</h1>
+          <p className="text-muted-foreground">Jugadores más activos y destacados de la comunidad</p>
+        </div>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard"><ArrowLeft className="h-4 w-4 mr-2" />Atrás</Link>
+        </Button>
       </div>
 
       <Tabs defaultValue="top">
