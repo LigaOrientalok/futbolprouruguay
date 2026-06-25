@@ -1,10 +1,14 @@
 import { Suspense } from "react"
+import Link from "next/link"
 import { getCurrentUser } from "@/lib/auth-server"
 import { query } from "@/lib/db"
 import { StatsCards } from "@/components/dashboard/stats-cards"
 import { RecentFeed } from "@/components/dashboard/recent-feed"
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { PremiumUpsell } from "@/components/dashboard/premium-upsell"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Shield, ArrowRight } from "lucide-react"
 import DashboardLoading from "./loading"
 import type { Post } from "@/lib/types"
 
@@ -83,6 +87,23 @@ async function DashboardContent({
       </div>
 
       <StatsCards initialStats={stats} />
+
+      {user.role === "admin" && (
+        <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Shield className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium text-sm">Panel de Administración</p>
+                <p className="text-xs text-muted-foreground">Gestioná usuarios, contenido y estadísticas</p>
+              </div>
+            </div>
+            <Button size="sm" asChild>
+              <Link href="/admin">Ir al panel <ArrowRight className="h-4 w-4 ml-1" /></Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-6">
         <RecentFeed posts={recentPosts} />
