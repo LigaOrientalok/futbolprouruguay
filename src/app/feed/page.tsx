@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { getFeedPosts, getPostComments, getUserLikes, createPost, toggleLike, addComment } from "@/lib/actions"
+import { getFeedPosts, getPostComments, getUserLikes, createPost, toggleLike, addComment, getUsers } from "@/lib/actions"
 import { uploadFiles } from "@/lib/uploadthing"
 import { useAuth } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,115 @@ import { Heart, MessageCircle, Send, Image as ImageIcon, ArrowLeft, Loader2, X }
 import { getInitials, formatRelativeTime } from "@/lib/utils"
 import Link from "next/link"
 import type { Post } from "@/lib/types"
+
+function MentionInput({
+  value, onChange, onKeyDown, placeholder,
+}: {
+  value: string
+  onChange: (v: string) => void
+  onKeyDown?: (e: React.KeyboardEvent) => void
+  placeholder?: string
+}) {
+  const [mentionSearch, setMentionSearch] = useState("")
+  const [showMentions, setShowMentions] = useState(false)
+  const [cursorPos, setCursorPos] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ["users-for-mentions"],
+    queryFn: () => getUsers(200),
+    staleTime: 60000,
+  })
+
+  const filteredUsers = useMemo(() => {
+    if (!mentionSearch) return []
+    const q = mentionSearch.toLowerCase()
+    return allUsers.filter(u =>
+      u.username?.toLowerCase().includes(q) ||
+      u.full_name?.toLowerCase().includes(q)
+    ).slice(0, 5)
+  }, [allUsers, mentionSearch])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    const pos = e.target.selectionStart || 0
+    setCursorPos(pos)
+
+    const textBefore = val.slice(0, pos)
+    const atIndex = textBefore.lastIndexOf("@")
+    if (atIndex !== -1 && (atIndex === 0 || textBefore[atIndex - 1] === " ")) {
+      const search = textBefore.slice(atIndex + 1)
+      if (!search.includes(" ")) {
+        setMentionSearch(search)
+        setShowMentions(true)
+        onChange(val)
+        return
+      }
+    }
+    setShowMentions(false)
+    onChange(val)
+  }
+
+  const selectMention = (username: string) => {
+    const textBefore = value.slice(0, cursorPos)
+    const atIndex = textBefore.lastIndexOf("@")
+    const textAfter = value.slice(cursorPos)
+    const newVal = textBefore.slice(0, atIndex) + `@${username} ` + textAfter
+    onChange(newVal)
+    setShowMentions(false)
+    inputRef.current?.focus()
+  }
+
+  return (
+    <div className="relative flex-1">
+      <Input
+        ref={inputRef}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder || "Escribí un comentario..."}
+        className="flex-1"
+      />
+      {showMentions && filteredUsers.length > 0 && (
+        <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border rounded-lg shadow-lg z-50 max-h-40 overflow-auto">
+          {filteredUsers.map(u => (
+            <button
+              key={u.id}
+              onClick={() => selectMention(u.username)}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent text-left"
+            >
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={u.avatar_url || undefined} />
+                <AvatarFallback className="text-[10px]">{getInitials(u.full_name)}</AvatarFallback>
+              </Avatar>
+              <span className="font-medium">{u.full_name}</span>
+              <span className="text-muted-foreground">@{u.username}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function renderText(text: string) {
+  const parts = text.split(/(@\w+)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith("@")) {
+      const username = part.slice(1)
+      return (
+        <Link
+          key={i}
+          href={`/profile?user=${username}`}
+          className="text-primary font-medium hover:underline"
+        >
+          {part}
+        </Link>
+      )
+    }
+    return part
+  })
+}
 
 export default function FeedPage() {
   const { user: authUser } = useAuth()
@@ -218,16 +327,20 @@ export default function FeedPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-4 space-y-3">
-                <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+                <p className="text-sm whitespace-pre-wrap">{renderText(post.content)}</p>
                 {images.length > 0 && (
-                  <div className={`grid gap-2 ${images.length === 1 ? "grid-cols-1" : images.length === 2 ? "grid-cols-2" : images.length === 3 ? "grid-cols-2" : "grid-cols-2"}`}>
+                  <div className={`grid gap-1 ${images.length === 1 ? "grid-cols-1" : images.length === 2 ? "grid-cols-2" : images.length === 4 ? "grid-cols-2" : "grid-cols-2"}`}>
                     {images.map((url, i) => (
-                      <img
-                        key={i}
-                        src={url}
-                        alt=""
-                        className={`w-full object-cover rounded-lg border ${images.length === 1 ? "max-h-96" : "h-40"} ${images.length === 3 && i === 0 ? "row-span-2 h-full" : ""}`}
-                      />
+                      <div key={i} className={`relative overflow-hidden rounded-lg border bg-muted ${images.length === 1 ? "max-h-[500px]" : images.length === 3 && i === 0 ? "row-span-2" : ""}`}>
+                        <img
+                          src={url}
+                          alt=""
+                          className="w-full h-full object-contain absolute inset-0"
+                          loading="lazy"
+                        />
+                        <div className={images.length === 1 ? "pb-[60%]" : "pb-[100%]"}>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -247,27 +360,29 @@ export default function FeedPage() {
                 {expandedComments[post.id] && (
                   <div className="space-y-3 w-full">
                     <div className="flex gap-2">
-                      <Input
+                      <MentionInput
                         value={commentInputs[post.id] || ""}
-                        onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
-                        placeholder="Escribí un comentario..."
-                        className="flex-1"
-                        onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
+                        onChange={(v) => setCommentInputs({ ...commentInputs, [post.id]: v })}
+                        onKeyDown={(e) => (e as React.KeyboardEvent).key === "Enter" && !(e as any).shiftKey && handleAddComment(post.id)}
+                        placeholder="Escribí un comentario... @ para mencionar"
                       />
                       <Button size="icon" variant="ghost" onClick={() => handleAddComment(post.id)}>
                         <Send className="h-4 w-4" />
                       </Button>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
                       {(commentsByPost[post.id] || []).map((comment) => {
                         const c = comment as typeof comment & { user: { id: string; full_name: string; avatar_url: string | null } }
                         return (
                         <div key={c.id} className="flex gap-2">
-                          <Avatar className="h-6 w-6">
+                          <Avatar className="h-6 w-6 shrink-0">
                             <AvatarImage src={c.user?.avatar_url || undefined} />
                             <AvatarFallback className="text-[10px]">{c.user ? getInitials(c.user.full_name) : "?"}</AvatarFallback>
                           </Avatar>
-                          <p className="text-sm"><span className="font-medium">{c.user?.full_name || "Usuario"}</span> {c.content}</p>
+                          <div className="text-sm">
+                            <Link href={`/profile?user=${c.user?.id}`} className="font-medium hover:underline">{c.user?.full_name || "Usuario"}</Link>
+                            {" "}{renderText(c.content)}
+                          </div>
                         </div>
                         )
                       })}
