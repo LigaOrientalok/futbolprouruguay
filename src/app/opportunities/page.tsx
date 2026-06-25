@@ -12,23 +12,28 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Calendar, MapPin, Plus, Loader2, Send, Building2 } from "lucide-react"
+import { Calendar, MapPin, Plus, Loader2, Send, Building2, AlertCircle } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { POSITIONS, CATEGORIES } from "@/lib/constants"
+import type { Position, Category } from "@/lib/types"
+
+const EMPTY_FORM = {
+  team_id: "",
+  position: "" as Position | "",
+  date: "",
+  category: "" as Category | "",
+  location: "",
+  description: "",
+}
 
 export default function OpportunitiesPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [creating, setCreating] = useState(false)
+  const [error, setError] = useState("")
+  const [dialogOpen, setDialogOpen] = useState(false)
 
-  const [form, setForm] = useState({
-    team_id: "",
-    position: "",
-    date: "",
-    category: "",
-    location: "",
-    description: "",
-  })
+  const [form, setForm] = useState(EMPTY_FORM)
 
   const { data: opportunities = [], isLoading } = useQuery({
     queryKey: ["opportunities"],
@@ -42,17 +47,39 @@ export default function OpportunitiesPage() {
   })
 
   const handleCreate = async () => {
-    if (!user || !form.team_id) return
+    if (!user || !form.team_id || !form.position || !form.date || !form.category || !form.location) {
+      setError("Completá todos los campos obligatorios")
+      return
+    }
+    setError("")
     setCreating(true)
-    await createOpportunity(form)
-    setCreating(false)
-    setForm({ team_id: "", position: "", date: "", category: "", location: "", description: "" })
-    queryClient.invalidateQueries({ queryKey: ["opportunities"] })
+    try {
+      await createOpportunity({
+        team_id: form.team_id,
+        position: form.position,
+        date: form.date,
+        category: form.category,
+        location: form.location,
+        description: form.description,
+      })
+      setForm(EMPTY_FORM)
+      setDialogOpen(false)
+      queryClient.invalidateQueries({ queryKey: ["opportunities"] })
+    } catch {
+      setError("Error al publicar la oportunidad. Intentá de nuevo.")
+    } finally {
+      setCreating(false)
+    }
   }
 
   const handleApply = async (opportunityId: string) => {
     if (!user) return
-    await applyToOpportunity(opportunityId)
+    try {
+      await applyToOpportunity(opportunityId)
+      queryClient.invalidateQueries({ queryKey: ["opportunities"] })
+    } catch {
+      setError("Error al postularte. Intentá de nuevo.")
+    }
   }
 
   return (
@@ -63,7 +90,7 @@ export default function OpportunitiesPage() {
           <p className="text-muted-foreground">Equipos buscando jugadores como vos</p>
         </div>
         {myTeams.length > 0 && (
-          <Dialog>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />Publicar oportunidad</Button>
             </DialogTrigger>
@@ -73,7 +100,7 @@ export default function OpportunitiesPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Equipo</Label>
+                  <Label>Equipo *</Label>
                   <Select value={form.team_id} onValueChange={(v) => setForm({ ...form, team_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Seleccioná equipo" /></SelectTrigger>
                     <SelectContent>
@@ -82,8 +109,8 @@ export default function OpportunitiesPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Posición</Label>
-                  <Select value={form.position} onValueChange={(v) => setForm({ ...form, position: v })}>
+                  <Label>Posición *</Label>
+                  <Select value={form.position} onValueChange={(v) => setForm({ ...form, position: v as Position })}>
                     <SelectTrigger><SelectValue placeholder="Seleccioná posición" /></SelectTrigger>
                     <SelectContent>
                       {POSITIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
@@ -92,12 +119,12 @@ export default function OpportunitiesPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>Fecha</Label>
+                    <Label>Fecha *</Label>
                     <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Categoría</Label>
-                    <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                    <Label>Categoría *</Label>
+                    <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v as Category })}>
                       <SelectTrigger><SelectValue placeholder="Categoría" /></SelectTrigger>
                       <SelectContent>
                         {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -106,13 +133,19 @@ export default function OpportunitiesPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Ubicación</Label>
+                  <Label>Ubicación *</Label>
                   <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Montevideo, cancha X" />
                 </div>
                 <div className="space-y-2">
                   <Label>Descripción</Label>
                   <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Detalles de la búsqueda..." />
                 </div>
+                {error && (
+                  <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    {error}
+                  </div>
+                )}
                 <Button onClick={handleCreate} disabled={creating} className="w-full">
                   {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Publicar
