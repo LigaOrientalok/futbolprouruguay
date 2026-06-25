@@ -159,6 +159,7 @@ export default function OpportunitiesPage() {
             </DialogContent>
           </Dialog>
         )}
+        </div>
       </div>
 
       {isLoading ? (
