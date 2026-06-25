@@ -3,11 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  LayoutDashboard, Users, Search, Calendar, MessageCircle,
+  Home, LayoutDashboard, Users, Search, Calendar, MessageCircle,
   Trophy, Star, Swords, ShoppingBag, Award,
 } from "lucide-react"
 
 export const sidebarItems = [
+  { href: "/", icon: Home, label: "Principal" },
   { href: "/dashboard", icon: LayoutDashboard, label: "Inicio" },
   { href: "/profile", icon: Users, label: "Mi Perfil" },
   { href: "/teams", icon: Trophy, label: "Equipos" },
