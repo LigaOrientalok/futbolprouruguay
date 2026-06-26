@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useMemo, useEffect } from "react"
+import { useState, useRef, useMemo, useEffect, useCallback } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getFeedPosts, getPostComments, getUserLikes, createPost, toggleLike, addComment, getUsers } from "@/lib/actions"
 import { uploadFiles } from "@/lib/uploadthing"
@@ -10,11 +10,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import { Heart, MessageCircle, Send, Image as ImageIcon, ArrowLeft, Loader2, X, ChevronLeft, ChevronRight, Star } from "lucide-react"
+import { Heart, MessageCircle, Send, Image as ImageIcon, ArrowLeft, Loader2, X, ChevronLeft, ChevronRight } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { toast } from "@/components/ui/use-toast"
 import { getInitials, formatRelativeTime } from "@/lib/utils"
 import Link from "next/link"
+import Image from "next/image"
 import type { Post } from "@/lib/types"
 
 function MentionInput({
@@ -172,11 +173,14 @@ function Lightbox({
         </button>
       )}
 
-      <img
+      <Image
         src={images[currentIndex]}
         alt=""
+        width={1200}
+        height={900}
         className="max-h-[90vh] max-w-[90vw] object-contain select-none"
         onClick={(e) => e.stopPropagation()}
+        unoptimized
       />
 
       {images.length > 1 && (
@@ -204,6 +208,7 @@ export default function FeedPage() {
   const [newPost, setNewPost] = useState("")
   const [postFiles, setPostFiles] = useState<File[]>([])
   const [postPreviews, setPostPreviews] = useState<string[]>([])
+  const postPreviewsRef = useRef<string[]>([])
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
@@ -243,13 +248,19 @@ export default function FeedPage() {
   const lightboxPost = lightboxPostId ? posts.find((p) => p.id === lightboxPostId) : null
   const lightboxImages = lightboxPost ? (lightboxPost as Post & { image_urls: string[] }).image_urls || [] : []
 
-  const handleLightboxPrev = () => {
+  const handleLightboxPrev = useCallback(() => {
     setLightboxIndex((prev) => (prev > 0 ? prev - 1 : lightboxImages.length - 1))
-  }
+  }, [lightboxImages.length])
 
-  const handleLightboxNext = () => {
+  const handleLightboxNext = useCallback(() => {
     setLightboxIndex((prev) => (prev < lightboxImages.length - 1 ? prev + 1 : 0))
-  }
+  }, [lightboxImages.length])
+
+  useEffect(() => {
+    return () => {
+      postPreviewsRef.current.forEach(u => URL.revokeObjectURL(u))
+    }
+  }, [])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).slice(0, 4 - postFiles.length)
@@ -257,12 +268,14 @@ export default function FeedPage() {
     for (const file of files) {
       const url = URL.createObjectURL(file)
       setPostPreviews(prev => [...prev, url])
+      postPreviewsRef.current = [...postPreviewsRef.current, url]
     }
     if (e.target) e.target.value = ""
   }
 
   const removeFile = (index: number) => {
     URL.revokeObjectURL(postPreviews[index])
+    postPreviewsRef.current = postPreviewsRef.current.filter((_, i) => i !== index)
     setPostFiles(prev => prev.filter((_, i) => i !== index))
     setPostPreviews(prev => prev.filter((_, i) => i !== index))
   }
@@ -281,6 +294,7 @@ export default function FeedPage() {
         setNewPost("")
         setPostFiles([])
         postPreviews.forEach(u => URL.revokeObjectURL(u))
+        postPreviewsRef.current = []
         setPostPreviews([])
         setUploading(false)
         queryClient.invalidateQueries({ queryKey: ["feed"] })
@@ -425,11 +439,12 @@ export default function FeedPage() {
                         className={`relative overflow-hidden rounded-lg border bg-muted cursor-pointer ${images.length === 1 ? "max-h-[500px]" : images.length === 3 && i === 0 ? "row-span-2" : ""}`}
                         onClick={() => { setLightboxPostId(post.id); setLightboxIndex(i) }}
                       >
-                        <img
+                        <Image
                           src={url}
                           alt=""
-                          className="w-full h-full object-contain absolute inset-0"
-                          loading="lazy"
+                          fill
+                          className="object-contain"
+                          unoptimized
                         />
                         <div className={images.length === 1 ? "pb-[60%]" : "pb-[100%]"}>
                         </div>
@@ -456,7 +471,7 @@ export default function FeedPage() {
                       <MentionInput
                         value={commentInputs[post.id] || ""}
                         onChange={(v) => setCommentInputs({ ...commentInputs, [post.id]: v })}
-                        onKeyDown={(e) => (e as React.KeyboardEvent).key === "Enter" && !(e as any).shiftKey && handleAddComment(post.id)}
+                        onKeyDown={(e) => (e as React.KeyboardEvent).key === "Enter" && !(e as React.KeyboardEvent).shiftKey && handleAddComment(post.id)}
                         placeholder="Escribí un comentario... @ para mencionar"
                       />
                       <Button size="icon" variant="ghost" onClick={() => handleAddComment(post.id)}>

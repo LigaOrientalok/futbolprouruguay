@@ -1,5 +1,3 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-
 export default function RankingLoading() {
   return (
     <div className="space-y-6 animate-pulse">

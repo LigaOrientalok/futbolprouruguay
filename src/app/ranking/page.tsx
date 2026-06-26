@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Medal, Star, TrendingUp, Award, MapPin, Target, Clock, ArrowLeft, Crown } from "lucide-react"
 import Link from "next/link"
 import { getInitials } from "@/lib/utils"
-import type { User, PlayerProfile } from "@/lib/types"
 
 export default function RankingPage() {
   const { data: players = [], isLoading } = useQuery({

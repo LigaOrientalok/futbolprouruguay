@@ -4,9 +4,10 @@ import { compare, hash } from "bcryptjs"
 import { query } from "./db"
 import type { NextResponse } from "next/server"
 
-const secret = new TextEncoder().encode(
-  process.env.AUTH_SECRET || "fallback-secret-change-in-production"
-)
+if (!process.env.AUTH_SECRET) {
+  throw new Error("AUTH_SECRET no configurado en el entorno")
+}
+const secret = new TextEncoder().encode(process.env.AUTH_SECRET)
 
 export const COOKIE_NAME = "session"
 

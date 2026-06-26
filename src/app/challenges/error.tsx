@@ -1,13 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Swords } from "lucide-react"
+import { Swords } from "lucide-react"
 
 export default function ChallengesError({
-  error,
   reset,
 }: {
-  error: Error & { digest?: string }
   reset: () => void
 }) {
   return (

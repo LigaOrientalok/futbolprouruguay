@@ -10,8 +10,12 @@ export async function POST() {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+    if (!stripeSecretKey) {
+      return NextResponse.json({ error: "Stripe no configurado" }, { status: 500 })
+    }
     const { default: Stripe } = await import("stripe")
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+    const stripe = new Stripe(stripeSecretKey)
 
     // Crear o recuperar customer de Stripe
     const subscriptions = await findAll<{ id: string; stripe_customer_id: string | null }>("subscriptions", {

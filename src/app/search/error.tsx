@@ -1,13 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { AlertCircle, SearchX } from "lucide-react"
+import { SearchX } from "lucide-react"
 
 export default function SearchError({
-  error,
   reset,
 }: {
-  error: Error & { digest?: string }
   reset: () => void
 }) {
   return (

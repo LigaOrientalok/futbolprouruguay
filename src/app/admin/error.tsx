@@ -1,13 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { AlertCircle, ShieldAlert } from "lucide-react"
+import { ShieldAlert } from "lucide-react"
 
 export default function AdminError({
-  error,
   reset,
 }: {
-  error: Error & { digest?: string }
   reset: () => void
 }) {
   return (

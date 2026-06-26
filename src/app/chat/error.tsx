@@ -1,13 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { AlertCircle, MessageCircle } from "lucide-react"
+import { MessageCircle } from "lucide-react"
 
 export default function ChatError({
-  error,
   reset,
 }: {
-  error: Error & { digest?: string }
   reset: () => void
 }) {
   return (

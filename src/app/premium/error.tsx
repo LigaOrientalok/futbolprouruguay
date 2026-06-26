@@ -1,13 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Crown } from "lucide-react"
+import { Crown } from "lucide-react"
 
 export default function PremiumError({
-  error,
   reset,
 }: {
-  error: Error & { digest?: string }
   reset: () => void
 }) {
   return (

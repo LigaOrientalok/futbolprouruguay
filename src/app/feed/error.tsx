@@ -4,10 +4,8 @@ import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
 
 export default function FeedError({
-  error,
   reset,
 }: {
-  error: Error & { digest?: string }
   reset: () => void
 }) {
   return (

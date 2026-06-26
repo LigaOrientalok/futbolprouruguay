@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Plus, Search, MapPin, Users, Home } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
-import type { Team } from "@/lib/types"
+
 import { CATEGORIES } from "@/lib/constants"
 
 export default function TeamsPage() {

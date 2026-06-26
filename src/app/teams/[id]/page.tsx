@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import Link from "next/link"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { getTeamById, getTeamMembers, getTeamNeeds, getMultipleUsers, addTeamNeed, applyToTeam, updateTeamBadge } from "@/lib/actions"
 import { useAuth } from "@/lib/auth-client"
 import { uploadFiles } from "@/lib/uploadthing"
@@ -20,12 +20,11 @@ import { MapPin, Users, ArrowLeft, Send, UserPlus, Home, Upload } from "lucide-r
 import { EmptyState } from "@/components/ui/empty-state"
 import { getInitials, formatDate } from "@/lib/utils"
 import { POSITIONS } from "@/lib/constants"
-import type { Team, TeamMember, User } from "@/lib/types"
+import type { TeamMember, User } from "@/lib/types"
 
 export default function TeamDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
-  const router = useRouter()
   const queryClient = useQueryClient()
   const [newNeedPosition, setNewNeedPosition] = useState("")
   const [newNeedDesc, setNewNeedDesc] = useState("")

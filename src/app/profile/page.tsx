@@ -17,7 +17,7 @@ import { Loader2, Camera, Save, Shield, Star, Trophy, Medal, CheckCircle2, Alert
 import { toast } from "@/components/ui/use-toast"
 import { getInitials } from "@/lib/utils"
 import { POSITIONS, CATEGORIES, LEVELS, AVAILABILITIES, LEGS } from "@/lib/constants"
-import type { User as UserType, PlayerProfile, Badge as BadgeType } from "@/lib/types"
+import type { PlayerProfile } from "@/lib/types"
 import { uploadFiles } from "@/lib/uploadthing"
 
 export default function ProfilePage() {

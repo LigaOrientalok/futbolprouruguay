@@ -7,8 +7,8 @@ import { revalidatePath, updateTag } from "next/cache"
 import { redirect } from "next/navigation"
 import type {
   User, Team, TeamMember, TeamNeed, PlayerProfile, PlayerApplication,
-  Post, Comment, Opportunity, OpportunityApplication,
-  Challenge, Chat, Message, Badge, PlayerRanking,
+  Post, Comment, Opportunity,
+  Challenge, Chat, Message, Badge,
 } from "./types"
 
 function assertAuth(user: UserRow | null): asserts user is UserRow {
