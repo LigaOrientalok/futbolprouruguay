@@ -1,7 +1,10 @@
 "use client"
 
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getAdminStats, getUsers, toggleUserSuspend, toggleUserRole } from "@/lib/actions"
+import { useAuth } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -11,16 +14,20 @@ import { Users, Trophy, Calendar, Star, Shield, Ban, CheckCircle } from "lucide-
 import { getInitials } from "@/lib/utils"
 
 export default function AdminPage() {
+  const { user } = useAuth()
+  const router = useRouter()
   const queryClient = useQueryClient()
 
   const { data: stats } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: getAdminStats,
+    enabled: !!user && user.role === "admin",
   })
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => getUsers(),
+    enabled: !!user && user.role === "admin",
   })
 
   const toggleStatusMutation = useMutation({
@@ -32,6 +39,14 @@ export default function AdminPage() {
     mutationFn: (userId: string) => toggleUserRole(userId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
   })
+
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      router.push("/dashboard")
+    }
+  }, [user, router])
+
+  if (!user || user.role !== "admin") return null
 
   if (isLoading) {
     return (

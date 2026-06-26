@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { query, updateById } from "@/lib/db"
 import { pusherServer } from "@/lib/pusher/server"
 import { getCurrentUser } from "@/lib/auth-server"
+import { validateOrigin } from "@/lib/csrf"
 
 interface ChatRow {
   participants: string[]
@@ -17,6 +18,8 @@ interface MessageRow {
 
 export async function POST(req: Request) {
   try {
+    const csrf = validateOrigin(req)
+    if (csrf) return csrf
     const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })

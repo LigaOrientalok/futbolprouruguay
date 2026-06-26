@@ -214,6 +214,11 @@ export async function deleteTeam(id: string) {
 export async function addTeamNeed(teamId: string, position: string, description: string) {
   const user = await getCurrentUser()
   assertAuth(user)
+  const membership = await findAll<TeamMember>("team_members", {
+    where: "team_id = $1 AND user_id = $2",
+    params: [teamId, user.id],
+  })
+  if (membership.length === 0) throw new Error("No sos miembro de este equipo")
   await insert("team_needs", { team_id: teamId, position, description, is_active: true })
   revalidatePath(`/teams/${teamId}`)
 }
@@ -243,6 +248,25 @@ export async function upsertPlayerProfile(userId: string, data: Partial<PlayerPr
   const user = await getCurrentUser()
   assertAuth(user)
   if (user.id !== userId) throw new Error("No autorizado")
+
+  if (data.age !== undefined && (typeof data.age !== "number" || data.age < 10 || data.age > 120)) {
+    throw new Error("Edad inválida")
+  }
+  if (data.height_cm !== undefined && (typeof data.height_cm !== "number" || data.height_cm < 100 || data.height_cm > 250)) {
+    throw new Error("Altura inválida")
+  }
+  if (data.weight_kg !== undefined && (typeof data.weight_kg !== "number" || data.weight_kg < 30 || data.weight_kg > 300)) {
+    throw new Error("Peso inválido")
+  }
+  const urlFields = ["social_instagram", "social_twitter", "social_facebook", "social_whatsapp"] as const
+  for (const field of urlFields) {
+    const value = data[field]
+    if (value && typeof value === "string" && value.length > 0) {
+      if (!/^(https?:\/\/)?[\w\-./]+/.test(value)) {
+        throw new Error(`${field} no es una URL válida`)
+      }
+    }
+  }
 
   const existing = await getPlayerProfile(userId)
   if (existing) {
@@ -280,6 +304,11 @@ export async function createOpportunity(data: {
 }) {
   const user = await getCurrentUser()
   assertAuth(user)
+  const membership = await findAll<TeamMember>("team_members", {
+    where: "team_id = $1 AND user_id = $2",
+    params: [data.team_id, user.id],
+  })
+  if (membership.length === 0) throw new Error("No sos miembro de este equipo")
   await insert("opportunities", { ...data, is_active: true })
   revalidatePath("/opportunities")
 }
@@ -318,6 +347,11 @@ export async function createChallenge(data: {
 }) {
   const user = await getCurrentUser()
   assertAuth(user)
+  const membership = await findAll<TeamMember>("team_members", {
+    where: "team_id = $1 AND user_id = $2",
+    params: [data.team_id, user.id],
+  })
+  if (membership.length === 0) throw new Error("No sos miembro de este equipo")
   await insert("challenges", { ...data, status: "open" })
   revalidatePath("/challenges")
 }
@@ -325,6 +359,11 @@ export async function createChallenge(data: {
 export async function acceptChallenge(challengeId: string, opponentTeamId: string) {
   const user = await getCurrentUser()
   assertAuth(user)
+  const membership = await findAll<TeamMember>("team_members", {
+    where: "team_id = $1 AND user_id = $2",
+    params: [opponentTeamId, user.id],
+  })
+  if (membership.length === 0) throw new Error("No sos miembro del equipo rival")
   await updateById("challenges", challengeId, {
     opponent_team_id: opponentTeamId, status: "accepted",
   })

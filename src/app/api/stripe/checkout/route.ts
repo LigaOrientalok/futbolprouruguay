@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth-server"
 import { findAll } from "@/lib/db"
+import { validateOrigin } from "@/lib/csrf"
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
+    const csrf = validateOrigin(req)
+    if (csrf) return csrf
     const user = await getCurrentUser()
 
     if (!user) {

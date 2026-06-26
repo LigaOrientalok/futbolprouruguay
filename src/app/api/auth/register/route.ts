@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server"
 import { query } from "@/lib/db"
 import { createSessionToken, hashPassword, COOKIE_NAME } from "@/lib/auth-server"
+import { validateOrigin } from "@/lib/csrf"
 
 const ALLOWED_ROLES = ["player", "captain"]
 
 export async function POST(req: Request) {
   try {
+    const csrf = validateOrigin(req)
+    if (csrf) return csrf
     const { email, password, full_name, username, role } = await req.json()
 
     if (!email || !password || !full_name || !username || !role) {
@@ -16,8 +19,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Rol inválido" }, { status: 400 })
     }
 
-    if (password.length < 6) {
-      return NextResponse.json({ error: "La contraseña debe tener al menos 6 caracteres" }, { status: 400 })
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: "Email inválido" }, { status: 400 })
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return NextResponse.json({ error: "El usuario solo puede contener letras, números y guión bajo" }, { status: 400 })
+    }
+
+    if (password.length < 8) {
+      return NextResponse.json({ error: "La contraseña debe tener al menos 8 caracteres" }, { status: 400 })
     }
 
     const existingEmail = await query("SELECT id FROM users WHERE email = $1", [email])
@@ -59,7 +70,7 @@ export async function POST(req: Request) {
     response.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60,
       path: "/",
     })

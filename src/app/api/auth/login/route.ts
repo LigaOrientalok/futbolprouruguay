@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { query } from "@/lib/db"
 import { createSessionToken, verifyPassword, COOKIE_NAME } from "@/lib/auth-server"
+import { validateOrigin } from "@/lib/csrf"
 
 interface UserRow {
   id: string
@@ -16,6 +17,8 @@ interface UserRow {
 
 export async function POST(req: Request) {
   try {
+    const csrf = validateOrigin(req)
+    if (csrf) return csrf
     const { email, password } = await req.json()
 
     if (!email || !password) {
@@ -58,7 +61,7 @@ export async function POST(req: Request) {
     response.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60,
       path: "/",
     })
