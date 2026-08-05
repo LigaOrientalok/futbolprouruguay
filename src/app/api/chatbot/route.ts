@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.GROQ_API_KEY) {
       return NextResponse.json(
         { error: "El asistente no está configurado" },
         { status: 500 }
@@ -44,9 +44,12 @@ export async function POST(req: Request) {
           typeof m.content === "string"
       )
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-    const stream = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    const groq = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+    })
+    const stream = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
       stream: true,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
